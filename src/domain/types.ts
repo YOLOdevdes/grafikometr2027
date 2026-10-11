@@ -8,6 +8,13 @@ export type AbsenceType = 'VACATION' | 'SICK' | 'TRAINING' | 'OTHER'
 /** Kontynent klienta — wyznacza krainę, przez którą wędruje quest. */
 export type Region = 'EUROPE' | 'NORTH_AMERICA' | 'SOUTH_AMERICA' | 'MIDDLE_EAST' | 'AFRICA' | 'ASIA' | 'OCEANIA' | 'OTHER'
 
+/** Wygląd postaci w paczce sprite'ów: płeć, odcień skóry (1–3), strój (1–3). */
+export interface Look {
+  g: 'M' | 'F'
+  skin: 1 | 2 | 3
+  outfit: 1 | 2 | 3
+}
+
 export interface Designer {
   id: string
   name: string
@@ -15,6 +22,7 @@ export interface Designer {
   cls: DesignerClass
   baseFte: number
   illustration?: string // data URL albo ścieżka w /public
+  look?: Look
   createdAt: string
   archivedAt?: string
 }

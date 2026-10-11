@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { exportJSON, importJSON, useWorld, wipe } from './db'
 import { loadOn } from './domain/availability'
 import { addDaysISO, fmt, mondayOf, todayISO, workdays } from './domain/dates'
@@ -13,10 +13,38 @@ import { RestScreen } from './screens/RestScreen'
 import { seedDemo } from './seed'
 import { AssignModal } from './ui/AssignModal'
 import { HeroCard } from './ui/HeroCard'
+import { CrtScreen } from './ui/Crt'
 import { Sprite } from './ui/Sprite'
 import { fmtFte } from './ui/common'
 
 type Tab = 'map' | 'quests' | 'party' | 'forge' | 'rest'
+type Crt = 'off' | 'crt' | 'phosphor' | 'monitor'
+const CRT_KEY = 'pipolator.crt'
+const CRT_NEXT: Record<Crt, Crt> = { off: 'crt', crt: 'phosphor', phosphor: 'monitor', monitor: 'off' }
+const CRT_LABEL: Record<Crt, string> = { off: 'CRT: wył.', crt: 'CRT: wł.', phosphor: 'CRT: fosfor', monitor: 'CRT: monitor' }
+
+function useCrt(): [Crt, () => void] {
+  const [mode, setMode] = useState<Crt>(() => {
+    try {
+      const v = localStorage.getItem(CRT_KEY)
+      return v === 'crt' || v === 'phosphor' || v === 'monitor' ? v : 'off'
+    } catch {
+      return 'off'
+    }
+  })
+  useEffect(() => {
+    const el = document.documentElement
+    el.classList.toggle('crt', mode !== 'off')
+    el.classList.toggle('phosphor', mode === 'phosphor')
+    el.classList.toggle('monitor', mode === 'monitor')
+    try {
+      localStorage.setItem(CRT_KEY, mode)
+    } catch {
+      /* brak storage */
+    }
+  }, [mode])
+  return [mode, () => setMode(m => CRT_NEXT[m])]
+}
 const TABS: { id: Tab; label: string }[] = [
   { id: 'map', label: 'Mapa' },
   { id: 'quests', label: 'Questy' },
@@ -27,6 +55,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 export default function App() {
   const world = useWorld()
+  const [crt, cycleCrt] = useCrt()
   const [tab, setTab] = useState<Tab>('map')
   const [demandId, setDemandId] = useState<string | null>(null)
   const [heroId, setHeroId] = useState<string | null>(null)
@@ -49,12 +78,13 @@ export default function App() {
 
   if (world.designers.length === 0 && world.projects.length === 0) {
     return (
+      <CrtScreen monitor={crt === 'monitor'}>
       <div className="empty-state">
         <div className="logo" style={{ fontSize: 34, marginBottom: 24 }}>PIPOLATOR</div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 24 }}>
-          <Sprite cls="MEDIOR_PD" scale={5} />
-          <Sprite cls="SENIOR_PD" state="work" scale={5} />
-          <Sprite cls="UX_RESEARCHER" scale={5} />
+          <Sprite cls="MEDIOR_PD" look={{ g: 'M', skin: 2, outfit: 1 }} scale={4} />
+          <Sprite cls="SENIOR_PD" look={{ g: 'F', skin: 1, outfit: 2 }} state="work" scale={4} />
+          <Sprite cls="UX_RESEARCHER" look={{ g: 'F', skin: 3, outfit: 3 }} scale={4} />
         </div>
         <div className="win">
           <p>Twoja drużyna jeszcze się nie zebrała.</p>
@@ -71,6 +101,7 @@ export default function App() {
         )}
         <ImportInput fileRef={fileRef} />
       </div>
+      </CrtScreen>
     )
   }
 
@@ -89,6 +120,7 @@ export default function App() {
   }
 
   return (
+    <CrtScreen monitor={crt === 'monitor'}>
     <div className="app">
       <header className="topbar">
         <div className="logo">PIPOLATOR</div>
@@ -125,6 +157,7 @@ export default function App() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <button className="sm" onClick={download} title="Pobierz kopię zapasową (JSON)">⬇ Backup</button>
               <button className="sm" onClick={() => fileRef.current?.click()} title="Wczytaj kopię zapasową">⬆ Import</button>
+              <button className={`sm ${crt !== 'off' ? 'on' : ''}`} onClick={cycleCrt} title="Efekt monitora: wył. → CRT → fosfor → monitor">📺 {CRT_LABEL[crt]}</button>
             </div>
           </div>
         )}
@@ -141,12 +174,14 @@ export default function App() {
       <footer style={{ padding: '0 22px 16px', fontSize: 12 }} className="dim">
         Dane trzymane lokalnie w tej przeglądarce — rób backup.{' '}
         <button className="ghost sm" onClick={async () => { if (confirm('Wyczyścić WSZYSTKIE dane? Najpierw zrób backup.')) await wipe() }}>Wyczyść dane</button>
+        <span style={{ float: 'right' }}>Grafiki: postacie — Mucho Pixels · las — ansimuz (itch.io)</span>
       </footer>
 
       {demand && <AssignModal key={demand.id} world={world} demand={demand} onClose={() => setDemandId(null)} />}
       {hero && <HeroCard key={hero.id} world={world} designer={hero} onClose={() => setHeroId(null)} />}
       <ImportInput fileRef={fileRef} />
     </div>
+    </CrtScreen>
   )
 }
 

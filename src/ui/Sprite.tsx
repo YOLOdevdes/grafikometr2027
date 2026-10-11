@@ -1,5 +1,7 @@
-import type { DesignerClass, MercenaryRole } from '../domain/types'
+import type { CSSProperties } from 'react'
+import type { DesignerClass, Look, MercenaryRole } from '../domain/types'
 import { CLASS_META, MERC_META } from '../domain/types'
+import { lookKey, spriteManifest } from './spriteSheets'
 
 /**
  * Placeholderowe sprite'y 16×20 px rysowane z map znaków.
@@ -105,12 +107,52 @@ function rects(map: string[], pal: Record<string, string | undefined>, dx = 0, d
 interface Props {
   cls?: DesignerClass
   merc?: MercenaryRole
+  look?: Look
   state?: SpriteState
   scale?: number
   title?: string
+  badge?: boolean
 }
 
-export function Sprite({ cls, merc, state = 'idle', scale = 3, title }: Props) {
+const STRIP: Record<SpriteState, { file: string; dur: number }> = {
+  idle: { file: 'idle', dur: 1.1 },
+  work: { file: 'walk', dur: 0.8 },
+  tired: { file: 'tired', dur: 1 },
+  sleep: { file: 'sleep', dur: 1 },
+}
+const CLASS_ICON: Record<DesignerClass, string> = { SENIOR_PD: '♛', MEDIOR_PD: '⚔', UX_RESEARCHER: '◉' }
+
+/** Postać z paczki Mucho Pixels (paski z scripts/build-sprites.py). */
+function SheetSprite({ cls, look, state, scale, title, badge }: Required<Pick<Props, 'look' | 'state' | 'scale'>> & Props) {
+  const m = spriteManifest()!
+  const { w, h } = m.frame
+  const strip = STRIP[state]
+  const n = m.frames[strip.file] ?? 1
+  const style = {
+    width: w * scale,
+    height: h * scale,
+    backgroundImage: `url(/sprites/${lookKey(look)}_${strip.file}.png)`,
+    backgroundSize: `${n * w * scale}px ${h * scale}px`,
+    '--n': n,
+    '--fw': `${w * scale}px`,
+    animation: n > 1 ? `mp-play ${strip.dur}s steps(${n}) infinite` : 'none',
+  } as CSSProperties
+  return (
+    <div className={`mp-sprite ${state}`} role="img" aria-label={title} title={title}>
+      <div className="mp-strip" style={style} />
+      {badge && cls && (
+        <span className="mp-badge" style={{ color: CLASS_META[cls].color, fontSize: 6 * scale }}>{CLASS_ICON[cls]}</span>
+      )}
+      {state === 'tired' && <span className="mp-sweat" style={{ fontSize: 5 * scale }}>💦</span>}
+      {state === 'sleep' && <span className="mp-zzz" style={{ fontSize: 6 * scale }}>z</span>}
+    </div>
+  )
+}
+
+export function Sprite({ cls, merc, look, state = 'idle', scale = 3, title, badge = true }: Props) {
+  if (look && spriteManifest()?.looks.includes(lookKey(look))) {
+    return <SheetSprite cls={cls} look={look} state={state} scale={scale} title={title} badge={badge} />
+  }
   const isMerc = !cls
   const color = cls ? CLASS_META[cls].color : MERC_META[merc ?? 'DEV'].color
   const pal: Record<string, string | undefined> = isMerc

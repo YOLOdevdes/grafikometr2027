@@ -4,6 +4,7 @@ import { addDaysISO, fmtRange, overlaps, todayISO, workdays } from '../domain/da
 import type { Absence, AbsenceType } from '../domain/types'
 import { ABSENCE_LABEL, CLASS_META, PHASE_LABEL } from '../domain/types'
 import { Modal } from '../ui/common'
+import { lookOf } from '../ui/spriteSheets'
 import { Sprite } from '../ui/Sprite'
 
 export function RestScreen({ world }: { world: FullWorld }) {
@@ -40,7 +41,7 @@ export function RestScreen({ world }: { world: FullWorld }) {
                 <tr key={a.id} className={a.to < today ? 'past' : ''}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {d && <Sprite cls={d.cls} state="sleep" scale={2} />}
+                      {d && <Sprite cls={d.cls} look={lookOf(d)} state="sleep" scale={2} />}
                       <div><b>{d?.name ?? '?'}</b><br /><small style={{ color: d ? CLASS_META[d.cls].color : undefined }}>{d && CLASS_META[d.cls].short}</small></div>
                     </div>
                   </td>

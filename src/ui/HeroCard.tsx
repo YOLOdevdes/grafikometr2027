@@ -3,9 +3,10 @@ import { actions, type FullWorld } from '../db'
 import { freeOn, loadOn, nextFreeDay } from '../domain/availability'
 import { chronicleOf, isPast } from '../domain/chronicle'
 import { addDaysISO, daysBetween, fmt, fmtRange, mondayOf, todayISO, workdays } from '../domain/dates'
-import type { Designer, DesignerClass } from '../domain/types'
+import type { Designer, DesignerClass, Look } from '../domain/types'
 import { ABSENCE_LABEL, CLASSES, CLASS_META, PHASE_LABEL } from '../domain/types'
 import { Modal, STATE_LABEL, designerState, fmtFte } from './common'
+import { lookOf } from './spriteSheets'
 import { Sprite } from './Sprite'
 
 const ICON: Record<DesignerClass, string> = { SENIOR_PD: '♛', MEDIOR_PD: '⚔', UX_RESEARCHER: '◉' }
@@ -55,7 +56,7 @@ export function HeroCard({ world, designer, onClose }: { world: FullWorld; desig
               {designer.illustration ? (
                 <img src={designer.illustration} alt={`Ilustracja: ${designer.name}`} />
               ) : (
-                <div className="placeholder"><Sprite cls={designer.cls} state={state} scale={9} /></div>
+                <div className="placeholder"><Sprite cls={designer.cls} look={lookOf(designer)} state={state} scale={7} /></div>
               )}
               {meta.rarity === 'Legendarna' && <div className="holo" />}
               <div className="hc-rarity">{meta.rarity.toUpperCase()}</div>
@@ -158,6 +159,35 @@ export function DesignerForm({ designer, onClose }: { designer?: Designer; onClo
             {[1, 0.8, 0.6, 0.5].map(v => <option key={v} value={v}>{fmtFte(v)} FTE</option>)}
           </select>
         </label>
+        <div className="field full">
+          Wygląd postaci
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div style={{ background: 'var(--input)', border: '2px solid #5f7a7c', borderRadius: 3, padding: 4 }}>
+              <Sprite cls={d.cls} look={lookOf({ id: d.id ?? 'new', look: d.look })} scale={2} state="work" />
+            </div>
+            {(
+              [
+                ['g', 'Postać', [['M', 'On'], ['F', 'Ona']]],
+                ['skin', 'Skóra', [[1, '1'], [2, '2'], [3, '3']]],
+                ['outfit', 'Strój', [[1, '1'], [2, '2'], [3, '3']]],
+              ] as const
+            ).map(([k, label, opts]) => (
+              <label key={k} className="field" style={{ flex: 1 }}>
+                {label}
+                <select
+                  value={String(lookOf({ id: d.id ?? 'new', look: d.look })[k])}
+                  onChange={e => {
+                    const cur = lookOf({ id: d.id ?? 'new', look: d.look })
+                    const v = k === 'g' ? e.target.value : Number(e.target.value)
+                    setD({ ...d, look: { ...cur, [k]: v } as Look })
+                  }}
+                >
+                  {opts.map(([v, l]) => <option key={String(v)} value={String(v)}>{l}</option>)}
+                </select>
+              </label>
+            ))}
+          </div>
+        </div>
         <label className="field full">
           Ilustracja na kartę
           <input

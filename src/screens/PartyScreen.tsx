@@ -6,6 +6,7 @@ import type { Designer } from '../domain/types'
 import { CLASSES, CLASS_META } from '../domain/types'
 import { DesignerForm } from '../ui/HeroCard'
 import { STATE_LABEL, designerState, fmtFte } from '../ui/common'
+import { lookOf } from '../ui/spriteSheets'
 import { Sprite } from '../ui/Sprite'
 
 export function PartyScreen({ world, onOpenHero }: { world: FullWorld; onOpenHero: (d: Designer) => void }) {
@@ -37,7 +38,7 @@ export function PartyScreen({ world, onOpenHero }: { world: FullWorld; onOpenHer
                 const st = designerState(world, h)
                 return (
                   <div key={h.id} className={`win mini-card ${h.archivedAt ? 'archived' : ''}`} onClick={() => onOpenHero(h)} style={{ borderColor: meta.color }}>
-                    <div className="stage"><Sprite cls={h.cls} state={st} scale={4} /></div>
+                    <div className="stage"><Sprite cls={h.cls} look={lookOf(h)} state={st} scale={3} /></div>
                     <b>{h.name}</b>
                     <div><small>{h.title ?? meta.hero}</small></div>
                     <div style={{ fontSize: 12, marginTop: 6 }} className={st === 'tired' ? 'no' : st === 'idle' ? 'ok' : st === 'sleep' ? 'dim' : 'wait'}>

@@ -96,7 +96,9 @@ Afryka → sawanna · Azja → mgliste góry · Oceania → wybrzeże · inne �
 Kraj klienta zapisywany dowolnie (pole tekstowe), kraina tylko z kontynentu.
 Każdy slot = ścieżka w kolorze roli; bohater stoi w miejscu „dziś”; pusty slot = duch z czerwoną plakietką;
 mgła poza czasem trwania questu; ⚑ start, ♜ meta. Widok „Bohaterowie” (wiersz = osoba) jako alternatywa.
-Tła są tymczasowe (SVG w kodzie) — docelowo paski parallax z paczki assetów w widoku z boku.
+Tło (na razie wspólne dla wszystkich kontynentów): ansimuz — *SunnyLand Forest of Illusion*
+(licencja: użycie, modyfikacja i redystrybucja dozwolone). Warstwy back/middle/ground w `public/lands/`,
+generowane `python3 scripts/build-lands.py`. Kontynent → kraina mapowany w `src/ui/biomes.ts` (REGION_LAND).
 
 ## 7. Kolory i rzadkość kart
 
@@ -122,6 +124,17 @@ Tła są tymczasowe (SVG w kodzie) — docelowo paski parallax z paczki assetów
    Układ karty: nagłówek „Pipolator · №”, ikona klasy, tytuł-pseudonim, ilustracja, 3 statystyki + serce.
 
 Statystyki karty: ⚔ aktywne projekty · 📜 projekty w kronice · ⏳ tygodnie do zwolnienia · ❤ wolne FTE w tym tygodniu.
+
+### Sprite'y postaci
+
+Źródło: Mucho Pixels — *Character Animation Asset Pack* v1.0 (itch.io, licencja GameDev Market Pro:
+użycie i edycja dozwolone, **bez redystrybucji plików**). Paczka w `assets-src/`, paski w `public/sprites/`
+— oba katalogi w `.gitignore`. Generowanie: `python3 scripts/build-sprites.py`.
+Bez paczki aplikacja wraca do placeholderów rysowanych w kodzie.
+
+Wygląd: płeć × odcień skóry × strój (18 wariantów), wybierany w formularzu bohatera; domyślnie losowany z id.
+Stany: wolny → idle · w projekcie → walk · przeciążony → wait (+💦) · urlop → leży (ostatnia klatka „death”) + z.
+Rola: ikonka nad głową (♛ Senior, ⚔ Medior, ◉ UX Researcher) w kolorze klasy.
 
 ### Szablon promptu ilustracji
 

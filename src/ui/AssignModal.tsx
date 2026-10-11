@@ -5,6 +5,7 @@ import { fmt, fmtRange } from '../domain/dates'
 import type { Demand, DesignerClass } from '../domain/types'
 import { ABSENCE_LABEL, CLASSES, CLASS_META, PHASE_LABEL } from '../domain/types'
 import { ClassBadge, Modal, designerState, fmtFte } from './common'
+import { lookOf } from './spriteSheets'
 import { Sprite } from './Sprite'
 
 function StatusText({ ev }: { ev: CandidateEval }) {
@@ -106,7 +107,7 @@ export function AssignModal({ world, demand, onClose }: { world: FullWorld; dema
 
       {assignee && (
         <div className="cand current">
-          <Sprite cls={assignee.cls} state={designerState(world, assignee)} scale={2} />
+          <Sprite cls={assignee.cls} look={lookOf(assignee)} state={designerState(world, assignee)} scale={2} />
           <div>
             <b>{assignee.name}</b> <small>— obecnie przypisany</small>
             {warnings.map(a => (
@@ -118,7 +119,7 @@ export function AssignModal({ world, demand, onClose }: { world: FullWorld; dema
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', marginTop: 18 }}>
-        <div className="head" style={{ fontSize: 12, color: 'var(--gold)' }}>KANDYDACI</div>
+        <div className="head" style={{ fontSize: 12, color: 'var(--accent)' }}>KANDYDACI</div>
         <label style={{ marginLeft: 'auto', fontSize: 13, display: 'flex', gap: 6, alignItems: 'center' }}>
           <input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} /> pokaż wszystkie klasy
         </label>
@@ -127,7 +128,7 @@ export function AssignModal({ world, demand, onClose }: { world: FullWorld; dema
         .filter(r => r.designer.id !== demand.designerId)
         .map(r => (
           <div key={r.designer.id} className={`cand ${r.status === 'BUSY' ? 'busy' : ''}`}>
-            <Sprite cls={r.designer.cls} state={designerState(world, r.designer)} scale={2} />
+            <Sprite cls={r.designer.cls} look={lookOf(r.designer)} state={designerState(world, r.designer)} scale={2} />
             <div>
               <b>{r.designer.name}</b>
               <br />

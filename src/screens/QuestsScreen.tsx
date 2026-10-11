@@ -5,6 +5,7 @@ import { addDaysISO, fmtRange, todayISO } from '../domain/dates'
 import type { Demand, DesignerClass, Phase, Project, Region } from '../domain/types'
 import { ABSENCE_LABEL, CLASSES, CLASS_META, MERC_META, MERC_ROLES, PHASES, PHASE_LABEL, REGIONS, REGION_META } from '../domain/types'
 import { ClassBadge, Modal, designerState, fmtFte } from '../ui/common'
+import { lookOf } from '../ui/spriteSheets'
 import { Sprite } from '../ui/Sprite'
 
 const COLORS = ['#e0a458', '#6cc4a1', '#7aa2f7', '#f78c6c', '#c792ea', '#ffcb6b', '#89ddff', '#f07178', '#c3e88d', '#ff9cac']
@@ -87,7 +88,7 @@ function QuestCard({ world, project: p, onEdit, onAddDemand, onOpenDemand }: {
           const warn = absenceWarnings(world, d).filter(a => a.to >= todayISO())
           return (
             <div key={d.id} className={`slot ${who ? '' : 'empty'}`} onClick={() => onOpenDemand(d)}>
-              {who ? <Sprite cls={who.cls} state={designerState(world, who)} scale={2} /> : <div style={{ width: 32, height: 40, display: 'grid', placeItems: 'center', fontSize: 22, color: 'var(--red)' }}>?</div>}
+              {who ? <Sprite cls={who.cls} look={lookOf(who)} state={designerState(world, who)} scale={2} /> : <div style={{ width: 32, height: 40, display: 'grid', placeItems: 'center', fontSize: 22, color: 'var(--red)' }}>?</div>}
               <div style={{ minWidth: 0 }}>
                 <b>{who?.name ?? 'Wolny slot'}</b>
                 <br />

@@ -7,6 +7,7 @@ import { addDaysISO, daysBetween, fmtRange, fromISO, maxISO, minISO, mondayOf, o
 import type { Demand, Designer, ISODate } from '../domain/types'
 import { ABSENCE_LABEL, CLASS_META, PHASE_LABEL } from '../domain/types'
 import { ClassBadge, designerState, fmtFte } from '../ui/common'
+import { lookOf } from '../ui/spriteSheets'
 import { Sprite } from '../ui/Sprite'
 import { JourneyRow } from './JourneyRow'
 
@@ -74,7 +75,7 @@ export function MapScreen({ world, onOpenDemand, onOpenHero }: Props) {
       /* brak storage — trudno */
     }
   }
-  const [start, setStart] = useState(() => addDaysISO(mondayOf(today), -7))
+  const [start, setStart] = useState(() => addDaysISO(mondayOf(today), -21))
   const span = SPAN[zoom]
   const end = addDaysISO(start, span) // wyłącznie
   const pos = (d: ISODate) => (Math.max(0, Math.min(span, daysBetween(start, d))) / span) * 100
@@ -151,7 +152,7 @@ export function MapScreen({ world, onOpenDemand, onOpenHero }: Props) {
           <span className="dim">{fmtRange(start, addDaysISO(end, -1))}</span>
           <span className="spacer" />
           <button className="sm" onClick={() => shift(-1)} aria-label="Wcześniej">◀</button>
-          <button className="sm" onClick={() => setStart(addDaysISO(mondayOf(today), zoom === 'D' ? -2 : -7))}>Dziś</button>
+          <button className="sm" onClick={() => setStart(addDaysISO(mondayOf(today), zoom === 'D' ? -2 : -21))}>Dziś</button>
           <button className="sm" onClick={() => shift(1)} aria-label="Później">▶</button>
           <span style={{ width: 12 }} />
           {(Object.keys(SPAN) as Zoom[]).map(z => (
@@ -197,7 +198,7 @@ export function MapScreen({ world, onOpenDemand, onOpenHero }: Props) {
             <span key={m.short}><i style={{ background: m.color }} />{m.short}</span>
           ))}
           <span><i style={{ background: 'repeating-linear-gradient(45deg,#fff5 0 3px,transparent 3px 6px)' }} />Odpoczynek</span>
-          <span><i style={{ background: '#ff5a6a55', borderColor: 'var(--red)' }} />Przeciążenie</span>
+          <span><i style={{ background: '#e0493a55', borderColor: 'var(--red)' }} />Przeciążenie</span>
           {view === 'quests' ? (
             <span>Ścieżka w kolorze roli · czerwona = wolny slot · bohater stoi tam, gdzie jest dziś · mgła = poza questem</span>
           ) : (
@@ -218,13 +219,13 @@ function HeroRow({ world, hero, start, end, pos, cols, zoom, onOpenDemand, onOpe
   const lanes = Math.max(1, ...bars.map(b => b.lane + 1))
   const leaves = world.absences.filter(a => a.designerId === hero.id && overlaps(a.from, a.to, start, last))
   const over = overloadRanges(world, hero, start, last)
-  const height = Math.max(58, lanes * 24 + 14)
+  const height = Math.max(72, lanes * 24 + 14)
   const meta = CLASS_META[hero.cls]
 
   return (
     <div className="tl-row" style={{ height }}>
       <div className="tl-who" onClick={() => onOpenHero(hero)} title="Otwórz kartę bohatera">
-        <Sprite cls={hero.cls} state={designerState(world, hero)} scale={2} />
+        <Sprite cls={hero.cls} look={lookOf(hero)} state={designerState(world, hero)} scale={2} badge={false} />
         <div className="nm">
           <b>{hero.name}</b>
           <small style={{ color: meta.color }}>{meta.short}{hero.baseFte < 1 ? ` · ${fmtFte(hero.baseFte)}` : ''}</small>

@@ -57,7 +57,7 @@ function ForecastChart({ cls, points }: { cls: DesignerClass; points: WeekPoint[
         {points.map((p, i) =>
           p.demandAll > p.supply + 0.05 ? (
             <rect key={p.week} x={x(i)} width={x(i + 1) - x(i)} y={y(p.demandAll)} height={y(p.supply) - y(p.demandAll)}
-              fill={p.demandCertain > p.supply + 0.05 ? '#ff5a6a55' : '#ff5a6a26'} />
+              fill={p.demandCertain > p.supply + 0.05 ? '#e0493a55' : '#e0493a26'} />
           ) : null,
         )}
         {SERIES.map(s => (
@@ -139,7 +139,7 @@ export function ForgeScreen({ world }: { world: FullWorld }) {
                 {s.label}
               </span>
             ))}
-            <span><i style={{ background: '#ff5a6a55' }} />Luka (ciemniej = pewna)</span>
+            <span><i style={{ background: '#e0493a55' }} />Luka (ciemniej = pewna)</span>
           </div>
           <div className="forge-grid">
             {CLASSES.map(cls => (
