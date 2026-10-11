@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipolator — szkic</title>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14121f; --panel:#221e33; --panel2:#2c2742; --ink:#efe6d2; --dim:#9a90b5; --line:#3d3659;
+  --gold:#f2c14e; --purple:#b07cff; --blue:#5ab0ff; --red:#ff5c6c; --green:#6fdc8c;
+  --qa:#6fdc8c; --ba:#ff9f43; --dev:#9aa7b8; --apm:#3fd1c9; --ape:#ff7ac6;
+  --px:4px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pixelify Sans",monospace;font-size:15px;
+  background-image:radial-gradient(#ffffff08 1px,transparent 1px);background-size:8px 8px}
+h1,h2,h3,.title{font-family:"Press Start 2P",monospace;font-weight:400;letter-spacing:.5px}
+/* pixel frame */
+.px{background:var(--panel);box-shadow:
+  0 calc(-1*var(--px)) 0 0 var(--line), 0 var(--px) 0 0 var(--line),
+  calc(-1*var(--px)) 0 0 0 var(--line), var(--px) 0 0 0 var(--line),
+  0 0 0 var(--px) #0006 inset;}
+button{font:inherit;color:var(--ink);background:var(--panel2);border:0;padding:6px 12px;cursor:pointer;
+  box-shadow:0 -3px 0 0 var(--line),0 3px 0 0 #0008,-3px 0 0 0 var(--line),3px 0 0 0 var(--line)}
+button.on{background:var(--gold);color:#221e33}
+button:active{transform:translateY(2px)}
+
+header{display:flex;align-items:center;gap:20px;padding:16px 24px;border-bottom:4px solid var(--line);background:#1a1729}
+header h1{font-size:16px;margin:0;color:var(--gold);text-shadow:3px 3px 0 #000}
+nav{display:flex;gap:10px}
+nav button{font-size:13px}
+.hud{margin-left:auto;display:flex;gap:16px}
+.stat{padding:8px 14px;display:flex;flex-direction:column;gap:4px;min-width:120px}
+.stat small{color:var(--dim);font-size:12px}
+.stat b{font-size:18px}
+.bar{height:8px;background:#0007;position:relative}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--green)}
+.alert{background:#3a1622;color:#ffd0d6;animation:blink 1.2s steps(2) infinite}
+@keyframes blink{50%{box-shadow:0 0 0 4px var(--red)}}
+
+main{display:grid;grid-template-columns:300px 1fr;gap:24px;padding:24px}
+aside h2,section h2{font-size:11px;color:var(--dim);margin:0 0 14px}
+.quest{padding:12px;margin-bottom:16px;cursor:pointer;position:relative}
+.quest:hover{transform:translate(-2px,-2px)}
+.quest .t{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.chip{font-size:11px;padding:2px 6px;background:#0005}
+.cls{display:inline-block;padding:2px 6px;font-size:12px;color:#14121f;font-weight:700}
+.c-senior{background:var(--gold)} .c-medior{background:var(--blue)} .c-ux{background:var(--purple)}
+.quest .meta{color:var(--dim);font-size:13px}
+.upcoming{border-left:6px dashed var(--dim)}
+
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.toolbar .zoom{margin-left:auto;display:flex;gap:8px}
+.grid{position:relative;padding:12px 12px 12px 0}
+.weeks{display:grid;grid-template-columns:190px repeat(8,1fr);font-size:12px;color:var(--dim);border-bottom:3px solid var(--line);padding-bottom:6px}
+.weeks div{padding-left:6px}
+.row{display:grid;grid-template-columns:190px 1fr;align-items:center;height:58px;border-bottom:2px dashed #ffffff10}
+.who{display:flex;align-items:center;gap:10px;padding-left:12px;cursor:pointer}
+.avatar{width:36px;height:36px;image-rendering:pixelated;flex:none}
+.who span{display:flex;flex-direction:column;line-height:1.15}
+.who small{font-size:11px}
+.lane{position:relative;height:100%;
+  background-image:linear-gradient(90deg,#ffffff0d 2px,transparent 2px);background-size:12.5% 100%}
+.alloc{position:absolute;height:20px;font-size:12px;padding:2px 6px;white-space:nowrap;overflow:hidden;color:#14121f;font-weight:600;
+  box-shadow:0 3px 0 #0008}
+.alloc.half{opacity:.75;height:14px;font-size:10px;padding:0 6px}
+.alloc.over{outline:3px solid var(--red);animation:blink 1s steps(2) infinite}
+.leave{position:absolute;top:4px;bottom:4px;background:repeating-linear-gradient(45deg,#ffffff22 0 4px,transparent 4px 8px);
+  border:2px dashed #ffffff55;font-size:11px;color:var(--ink);display:flex;align-items:flex-end;padding:2px 4px}
+.today{position:absolute;top:0;bottom:0;width:3px;background:var(--red);left:calc(190px + (100% - 202px)*0.6/8)}
+.today::before{content:"DZIŚ";position:absolute;top:-4px;left:6px;font-size:10px;color:var(--red);font-family:"Press Start 2P"}
+.legend{display:flex;gap:16px;margin-top:16px;font-size:12px;color:var(--dim);flex-wrap:wrap}
+.legend i{display:inline-block;width:14px;height:10px;margin-right:6px;vertical-align:middle}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;padding:24px;z-index:10}
+.overlay.open{display:flex}
+.assign{width:min(620px,100%);padding:22px}
+.assign h3{font-size:12px;margin:0 0 6px;color:var(--gold)}
+.cand{display:flex;align-items:center;gap:12px;padding:10px;margin-top:12px;background:var(--panel2)}
+.cand .st{margin-left:auto;font-size:13px;text-align:right}
+.cand .st small{display:block;color:var(--dim)}
+.ok{color:var(--green)} .wait{color:var(--gold)} .warn{color:#ffb347} .no{color:var(--red)}
+.cand.dis{opacity:.5}
+
+/* big card */
+.card-wrap{perspective:1200px}
+.card{width:340px;height:500px;position:relative;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.2,.8,.2,1);cursor:pointer}
+.card.flip{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;padding:14px;border-radius:6px;overflow:hidden}
+.front{background:linear-gradient(160deg,#4a3a10,#1d1608);border:6px solid var(--gold);box-shadow:0 0 40px #f2c14e66}
+.front .art{height:300px;border:4px solid #000;position:relative;overflow:hidden;
+  background:radial-gradient(circle at 50% 30%,#ffe9a8 0,#d78a2b 18%,#5b2a6e 45%,#160f2a 75%)}
+.front .art svg{position:absolute;inset:0;width:100%;height:100%}
+.holo{position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,#ffffff55 45%,#7ff3ff44 50%,#ff8bf644 55%,transparent 70%);
+  background-size:250% 250%;mix-blend-mode:color-dodge;animation:holo 4s linear infinite;pointer-events:none}
+@keyframes holo{from{background-position:100% 0}to{background-position:-100% 0}}
+.front .name{font-family:"Press Start 2P";font-size:14px;margin:12px 0 4px;color:#fff3c4;text-shadow:2px 2px 0 #000}
+.front .klass{font-size:13px;color:var(--gold)}
+.front .quest-now{margin-top:10px;background:#0006;padding:8px;font-size:13px}
+.rarity{position:absolute;top:22px;right:22px;font-family:"Press Start 2P";font-size:8px;background:var(--gold);color:#221e33;padding:4px 6px;z-index:2}
+.back{transform:rotateY(180deg);background:#1d1830;border:6px solid var(--gold)}
+.back h3{font-size:11px;color:var(--gold);margin:4px 0 12px}
+.chron{font-size:13px;border-left:3px solid var(--line);padding-left:12px}
+.chron div{margin-bottom:10px;position:relative}
+.chron div::before{content:"";position:absolute;left:-18px;top:5px;width:9px;height:9px;background:var(--gold)}
+.chron small{color:var(--dim);display:block}
+.hint{color:var(--dim);font-size:12px;text-align:center;margin-top:12px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PIPOLATOR</h1>
+  <nav>
+    <button class="on">Mapa</button><button>Questy</button><button>Drużyna</button><button>Kuźnia</button><button>Odpoczynek</button>
+  </nav>
+  <div class="hud">
+    <div class="stat px"><small>Obłożenie zespołu</small><b>87%</b><div class="bar"><i style="width:87%"></i></div></div>
+    <div class="stat px"><small>Otwarte zlecenia</small><b>4</b></div>
+    <div class="stat px alert"><small style="color:#ffb3bd">⚠ Kuźnia</small><b style="font-size:14px">−1.5 Senior PD<br><small style="color:#ffd0d6">od 03.11</small></b></div>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <h2>▼ TABLICA ZLECEŃ</h2>
+    <div class="quest px" onclick="openAssign()">
+      <div class="t"><span class="cls c-senior">SENIOR PD · 1.0</span><span class="chip">DELIVERY</span></div>
+      <div><b>Northwind</b> — app mobilna</div>
+      <div class="meta">03.11 → 19.12 · brak kandydata</div>
+    </div>
+    <div class="quest px">
+      <div class="t"><span class="cls c-ux">UX R · 0.5</span><span class="chip">DISCOVERY</span></div>
+      <div><b>Helix Bank</b></div>
+      <div class="meta">20.10 → 14.11</div>
+    </div>
+    <div class="quest px upcoming">
+      <div class="t"><span class="cls c-medior">MEDIOR PD · 1.0</span><span class="chip">PRESALES</span></div>
+      <div><b>Orbit Retail</b> <span class="chip">NADCHODZĄCY</span></div>
+      <div class="meta">10.11 → 21.11</div>
+    </div>
+    <div class="quest px upcoming">
+      <div class="t"><span class="cls c-senior">SENIOR PD · 0.5</span><span class="chip">DISCOVERY</span></div>
+      <div><b>Orbit Retail</b> <span class="chip">NADCHODZĄCY</span></div>
+      <div class="meta">24.11 → 30.01</div>
+    </div>
+  </aside>
+
+  <section>
+    <div class="toolbar">
+      <h2 style="margin:0">▼ MAPA KAMPANII · PAŹ–GRU 2026</h2>
+      <div class="zoom"><button>D</button><button class="on">T</button><button>M</button><button>R</button></div>
+    </div>
+    <div class="grid px">
+      <div class="weeks"><div></div><div>06.10</div><div>13.10</div><div>20.10</div><div>27.10</div><div>03.11</div><div>10.11</div><div>17.11</div><div>24.11</div></div>
+      <div id="rows"></div>
+      <div class="today"></div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--gold)"></i>Senior PD</span>
+      <span><i style="background:var(--blue)"></i>Medior PD</span>
+      <span><i style="background:var(--purple)"></i>UX Researcher</span>
+      <span><i style="background:repeating-linear-gradient(45deg,#fff5 0 3px,transparent 3px 6px);border:1px dashed #fff8"></i>Odpoczynek</span>
+      <span><i style="outline:2px solid var(--red)"></i>Przeciążenie</span>
+      <span>Kliknij bohatera → karta · kliknij zlecenie → obsadzanie</span>
+    </div>
+  </section>
+</main>
+
+<!-- assign modal -->
+<div class="overlay" id="assign" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="assign px">
+    <h3>OBSADŹ ZLECENIE</h3>
+    <div style="margin-bottom:6px"><span class="cls c-senior">SENIOR PD · 1.0</span> &nbsp;Northwind · Delivery · 03.11 → 19.12</div>
+    <div class="cand"><span id="a1"></span><div><b>Kasia W.</b><br><small>Senior PD</small></div>
+      <div class="st wait">⏳ Wolna od 17.11<small>Helix Discovery 1.0 do 14.11</small></div></div>
+    <div class="cand"><span id="a2"></span><div><b>Marek P.</b><br><small>Senior PD</small></div>
+      <div class="st warn">⚠ Częściowo<small>urlop 24.11–05.12</small></div></div>
+    <div class="cand"><span id="a3"></span><div><b>Ola S.</b><br><small>Medior PD · inna klasa</small></div>
+      <div class="st ok">✓ Wolna<small>slot dla Seniora — ostrzeżenie</small></div></div>
+    <div class="cand dis"><span id="a4"></span><div><b>Tomek R.</b><br><small>Senior PD</small></div>
+      <div class="st no">✕ Niedostępny<small>Atlas Delivery 1.0 do 31.01</small></div></div>
+    <p class="hint">Brak w pełni wolnego Seniora → zlecenie zasila alert w Kuźni</p>
+  </div>
+</div>
+
+<!-- card modal -->
+<div class="overlay" id="cardm" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="card-wrap">
+    <div class="card" id="card" onclick="this.classList.toggle('flip')">
+      <div class="face front">
+        <div class="rarity">LEGENDARNA</div>
+        <div class="art">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax slice">
+            <polygon points="0,100 20,62 35,78 52,48 70,74 85,58 100,100" fill="#1a0f2e"/>
+            <circle cx="50" cy="28" r="10" fill="#fff6d0" opacity=".9"/>
+            <path d="M44 100 L47 58 Q50 50 53 58 L56 100Z" fill="#0b0716"/>
+            <path d="M42 66 Q50 40 58 66 Z" fill="#0b0716"/>
+            <line x1="60" y1="40" x2="62" y2="100" stroke="#0b0716" stroke-width="2"/>
+            <circle cx="60" cy="38" r="3" fill="#7ff3ff"/>
+          </svg>
+          <div class="holo"></div>
+        </div>
+        <div class="name">KASIA W.</div>
+        <div class="klass">✦ Arcymagini · Senior Product Designer</div>
+        <div class="quest-now">⚔ Teraz: <b>Helix Bank</b> · Discovery · 1.0 FTE<br><small style="color:var(--dim)">wolna od 17.11</small></div>
+      </div>
+      <div class="face back">
+        <h3>KRONIKA</h3>
+        <div class="chron">
+          <div><b>Helix Bank</b> · Discovery<small>20.10.2026 → 14.11.2026 · 1.0</small></div>
+          <div><b>Atlas</b> · Delivery<small>03.03.2026 → 30.09.2026 · 1.0</small></div>
+          <div><b>Atlas</b> · Discovery<small>12.01.2026 → 27.02.2026 · 0.5</small></div>
+          <div><b>Orbit</b> · Presales<small>01.12.2025 → 19.12.2025 · 0.5</small></div>
+        </div>
+        <h3 style="margin-top:20px">ODPOCZYNEK</h3>
+        <div style="font-size:13px">🏝 22.12 → 02.01 · urlop</div>
+      </div>
+    </div>
+    <p class="hint">kliknij kartę, by odwrócić · ilustracja = placeholder do wygenerowania</p>
+  </div>
+</div>
+
+<script>
+// 8 weeks: 13.10 → 07.12 ; position by week index (0..8)
+const W = 8, pct = w => (w / W * 100) + '%';
+const col = {gold:'var(--gold)', blue:'var(--blue)', purple:'var(--purple)'};
+const people = [
+  {n:'Kasia W.', c:'Senior PD', k:'gold', a:[[0.9,4.4,'Helix Bank · Discovery',1]], l:[]},
+  {n:'Marek P.', c:'Senior PD', k:'gold', a:[[0,2,'Atlas · Delivery',1],[2,6,'Orbit · Presales',0.5]], l:[[6,7.6,'urlop']]},
+  {n:'Tomek R.', c:'Senior PD', k:'gold', a:[[0,8,'Atlas · Delivery',1],[3,5,'Northwind · Presales',0.5,true]], l:[]},
+  {n:'Ola S.',   c:'Medior PD', k:'blue', a:[[0,3,'Atlas · Delivery',1]], l:[[1,1.6,'L4']]},
+  {n:'Bartek L.',c:'Medior PD', k:'blue', a:[[0,8,'Northwind · Discovery',1]], l:[[4,5,'urlop']]},
+  {n:'Ewa M.',   c:'UX Researcher', k:'purple', a:[[0,1.4,'Atlas · Discovery',0.5],[1,6,'Helix Bank · Discovery',0.5]], l:[]},
+];
+function avatar(k){ // tiny pixel sprite
+  const m=['..XXXX..','.XXXXXX.','.XoXXoX.','.XXXXXX.','..XXXX..','.cccccc.','cccccccc','cc.cc.cc'];
+  let s=`<svg class="avatar" viewBox="0 0 8 8" shape-rendering="crispEdges">`;
+  m.forEach((r,y)=>[...r].forEach((p,x)=>{const f={X:'#f1c9a5',o:'#14121f',c:col[k]}[p]; if(f)s+=`<rect x="${x}" y="${y}" width="1" height="1" fill="${f}"/>`}));
+  return s+'</svg>';
+}
+document.getElementById('rows').innerHTML = people.map(p=>`
+  <div class="row">
+    <div class="who" onclick="document.getElementById('cardm').classList.add('open')">${avatar(p.k)}<span><b>${p.n}</b><small style="color:${col[p.k]}">${p.c}</small></span></div>
+    <div class="lane">
+      ${p.l.map(([f,t,txt])=>`<div class="leave" style="left:${pct(f)};width:${pct(t-f)}">${txt}</div>`).join('')}
+      ${p.a.map(([f,t,txt,fte,over],i)=>`<div class="alloc ${fte<1?'half':''} ${over?'over':''}" style="left:${pct(f)};width:${pct(t-f)};top:${fte<1&&i? 34:8}px;background:${col[p.k]}">${txt} · ${fte}</div>`).join('')}
+    </div>
+  </div>`).join('');
+['a1','a2','a3','a4'].forEach((id,i)=>document.getElementById(id).outerHTML=avatar(['gold','gold','blue','gold'][i]));
+function openAssign(){document.getElementById('assign').classList.add('open')}
+</script>
+</body>
+</html>
