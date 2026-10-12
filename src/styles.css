@@ -784,3 +784,8 @@ html.radio-on .radio-dock { display: block; }
 .nb-check:disabled { cursor: default; }
 .nb-line input:read-only:focus { background: transparent; }
 .nb-empty { padding-left: 52px; color: #8d8471; font-size: 14px; }
+
+/* logo w nagłówku = powrót do menu startowego */
+.brand-home { all: unset; cursor: pointer; display: inline-block; }
+.brand-home:hover .logo80 { filter: brightness(1.15); }
+.brand-home:focus-visible { outline: 2px dashed var(--accent); outline-offset: 2px; }

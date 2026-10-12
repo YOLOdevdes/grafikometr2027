@@ -208,7 +208,11 @@ export default function App() {
     return (
       <CrtScreen monitor={crt === 'monitor'}>
       <div className="empty-state">
-        <div style={{ marginBottom: 24 }}><Logo80 /></div>
+        <div style={{ marginBottom: 24 }}>
+          <button type="button" className="brand-home" onClick={() => (READ_ONLY ? location.assign('/') : setStarted(false))} title="Wróć do menu startowego" aria-label="Wróć do menu startowego">
+            <Logo80 />
+          </button>
+        </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 24 }}>
           <Sprite cls="MEDIOR_PD" look={{ g: 'M', skin: 2, outfit: 1 }} scale={4} />
           <Sprite cls="SENIOR_PD" look={{ g: 'F', skin: 1, outfit: 2 }} state="work" scale={4} />
@@ -254,7 +258,15 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <Logo80 size="sm" />
+          <button
+            type="button"
+            className="brand-home"
+            onClick={() => (READ_ONLY ? location.assign('/') : setStarted(false))}
+            title="Wróć do menu startowego"
+            aria-label="Wróć do menu startowego"
+          >
+            <Logo80 size="sm" />
+          </button>
           <small className="ver" title="Wersja aplikacji">ver {VERSION}</small>
           {READ_ONLY ? (
             <span className="mode-chip">PODGLĄD</span>
