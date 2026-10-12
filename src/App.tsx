@@ -81,7 +81,7 @@ export default function App() {
     const { empty } = await pull()
     if (empty) await wipe() // pusty serwer = start od zera
     startAutoSave(expire)
-    if (path) setPreviewPath(path)
+    setPreviewPath(path ?? (await api.session()).previewPath ?? null)
     setAuth('in')
   }
   const logout = async () => {
@@ -96,7 +96,7 @@ export default function App() {
   // start: podgląd pobiera dane z linku, edycja sprawdza sesję
   useEffect(() => {
     if (READ_ONLY) {
-      pullPreview().then(ok => setAuth(ok ? 'preview' : 'deadLink'), () => setAuth('error'))
+      pullPreview().then(ok => { setAuth(ok ? 'preview' : 'deadLink'); setStarted(ok) }, () => setAuth('error'))
       return startPreviewPolling()
     }
     api.session().then(
@@ -153,6 +153,14 @@ export default function App() {
 
   if (!world) return null
 
+  /** Otwiera podgląd w nowej karcie i kopiuje link do schowka (do wysłania designerom). */
+  const openPreview = () => {
+    if (!previewPath) return
+    const url = `${location.origin}${previewPath}`
+    window.open(url, '_blank', 'noopener')
+    navigator.clipboard.writeText(url).catch(() => {})
+  }
+
   if (!started) {
     const settingsItems: TitleItem[] = [
       { label: `SCREEN: ${CRT_TITLE[crt]}`, action: cycleCrt },
@@ -178,7 +186,14 @@ export default function App() {
     const byAuth: Record<Auth, { items: TitleItem[]; message?: string }> = {
       checking: { items: settingsItems, message: 'ŁĄCZENIE…' },
       out: { items: [login, ...settingsItems] },
-      in: { items: [{ label: 'START GAME', action: () => setStarted(true) }, ...settingsItems, { label: 'LOGOUT', action: logout }] },
+      in: {
+        items: [
+          { label: 'START GAME', action: () => setStarted(true) },
+          ...(previewPath ? [{ label: 'PODGLĄD', action: openPreview }] : []),
+          ...settingsItems,
+          { label: 'LOGOUT', action: logout },
+        ],
+      },
       preview: { items: [{ label: 'START', action: () => setStarted(true) }, ...settingsItems], message: 'TRYB PODGLĄDU' },
       deadLink: { items: settingsItems, message: 'TEN LINK PODGLĄDU JEST NIEAKTYWNY' },
       error: { items: settingsItems, message: 'BRAK POŁĄCZENIA Z SERWEREM — ODŚWIEŻ STRONĘ' },
@@ -261,17 +276,6 @@ export default function App() {
             <div className="nav-settings">
               {!READ_ONLY && (
                 <>
-                  {previewPath && (
-                    <button
-                      className="nav-set"
-                      onClick={async () => {
-                        const url = `${location.origin}${previewPath}`
-                        await navigator.clipboard.writeText(url).then(() => alert(`Skopiowano link podglądu:\n${url}`), () => prompt('Link podglądu:', url))
-                      }}
-                    >
-                      Skopiuj link podglądu
-                    </button>
-                  )}
                   <button className="nav-set" onClick={download}>Pobierz kopię zapasową</button>
                   <button className="nav-set" onClick={() => fileRef.current?.click()}>Wczytaj kopię zapasową</button>
                 </>
