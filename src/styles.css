@@ -271,7 +271,6 @@ table.list tr.past td { opacity: 0.5; }
 
 /* ---------- efekt monitora CRT ----------
    html.crt            — płasko na całym oknie (linie, siatka, szum, pas, winieta, migotanie)
-   html.crt.phosphor   — j.w. + monochromatyczna zieleń
    html.crt.monitor    — j.w. + obudowa starego monitora i wygięty kineskop */
 .crt-overlay, .monitor-case { display: none; }
 html.crt body { text-shadow: -0.8px 0 #ff2a2a55, 0.8px 0 #22d3ff55, 0 0 4px #ffffff45, 0 0 12px #ffffff18; }
@@ -297,8 +296,6 @@ html.crt .crt-overlay::after {
 @keyframes crt-flicker { 0%, 100% { opacity: 1; } 31% { opacity: 0.85; } 32% { opacity: 1; } 67% { opacity: 0.9; } 68% { opacity: 1; } 89% { opacity: 0.8; } 90% { opacity: 1; } }
 
 /* fosfor */
-html.crt.phosphor .crt-overlay { backdrop-filter: grayscale(1) sepia(1) hue-rotate(48deg) saturate(2.8) brightness(0.95) contrast(1.15); -webkit-backdrop-filter: grayscale(1) sepia(1) hue-rotate(48deg) saturate(2.8) brightness(0.95) contrast(1.15); }
-html.crt.phosphor body { text-shadow: 0 0 3px #9dff6a90, 0 0 12px #9dff6a40; }
 
 /* ---- monitor: obudowa + kineskop ---- */
 html.crt.monitor, html.crt.monitor body { height: 100%; overflow: hidden; }
@@ -360,7 +357,6 @@ html.crt.monitor .monitor-case::after {
 .monitor-power { display: flex; align-items: center; gap: 12px; }
 .monitor-led { width: 9px; height: 9px; border-radius: 50%; background: #7dff5a; box-shadow: 0 0 6px #7dff5a, 0 0 14px #7dff5a90; }
 .monitor-switch { width: 42px; height: 22px; border-radius: 4px; background: linear-gradient(180deg, #cfc6ae, #a99f86); box-shadow: inset 0 1px 0 #f3eddc, 0 2px 0 #6d6552, 0 0 0 1px #8f866d; }
-html.crt.monitor.phosphor .monitor-led { background: #9dff6a; }
 
 @media (prefers-reduced-motion: reduce) { html.crt .crt-overlay::before, .crt-noise, .crt-roll { animation: none; } .crt-roll { display: none; } }
 .board-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
@@ -789,3 +785,16 @@ html.radio-on .radio-dock { display: block; }
 .brand-home { all: unset; cursor: pointer; display: inline-block; }
 .brand-home:hover .logo80 { filter: brightness(1.15); }
 .brand-home:focus-visible { outline: 2px dashed var(--accent); outline-offset: 2px; }
+
+/* ---------- tryb ekranu „Game Boy” (domyślny): wszystko w 5 zieleniach, poza logo ----------
+   Filtr na każdym obszarze osobno (nie na <html>), bo logo ma zostać kolorowe — jak na ekranie startowym. */
+html.gb .app > main,
+html.gb .app > footer,
+html.gb .topbar > :not(.brand),
+html.gb .brand > :not(.brand-home),
+html.gb .empty-state > :not(.empty-logo),
+html.gb #overlay-root > *,
+html.gb .otip,
+html.gb .radio-dock { filter: url(#gb-palette); }
+html.gb body, html.gb .empty-state { background: radial-gradient(ellipse at 50% 35%, #1f3d29 0%, #0e2116 75%) fixed; }
+html.gb .topbar { background: #0e2116; border-bottom-color: #1f3d29; }

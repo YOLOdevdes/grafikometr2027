@@ -4,6 +4,7 @@ import { todayISO } from '../domain/dates'
 import type { Designer, DesignerClass } from '../domain/types'
 import { CLASS_META } from '../domain/types'
 import type { SpriteState } from './Sprite'
+import { inOverlay } from './gbPalette'
 
 export function Modal({ onClose, children, wide, title }: { onClose: () => void; children: ReactNode; wide?: boolean; title?: string }) {
   useEffect(() => {
@@ -11,13 +12,13 @@ export function Modal({ onClose, children, wide, title }: { onClose: () => void;
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-  return (
+  return inOverlay(
     <div className="overlay" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className={`win modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         {title && <div className="win-title">{title}</div>}
         {children}
       </div>
-    </div>
+    </div>,
   )
 }
 

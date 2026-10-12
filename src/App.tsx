@@ -17,28 +17,30 @@ import { Toggle } from './ui/Toggle'
 import { isMusicOn, onMusicChange, setMusicOn } from './ui/radio'
 import { Logo80 } from './ui/Logo80'
 import { VERSION } from './version'
+import { GbFilter, OverlayRoot } from './ui/gbPalette'
 import { Sprite } from './ui/Sprite'
 
-type Crt = 'off' | 'crt' | 'phosphor' | 'monitor'
-const CRT_KEY = 'pipolator.crt'
-const CRT_NEXT: Record<Crt, Crt> = { off: 'crt', crt: 'phosphor', phosphor: 'monitor', monitor: 'off' }
-const CRT_TITLE: Record<Crt, string> = { off: 'MODERN', crt: 'CRT', phosphor: 'PHOSPHOR', monitor: 'MONITOR' }
-const SCREEN_LABEL: Record<Crt, string> = { off: 'Wył.', crt: 'CRT', phosphor: 'Fosfor', monitor: 'Monitor' }
+/** Tryb ekranu: gb = paleta Game Boya (domyślny), crt / monitor = efekty kineskopu, off = nowoczesny. */
+type Crt = 'off' | 'crt' | 'gb' | 'monitor'
+const CRT_KEY = 'pipolator.screen' // nowy klucz: każdy startuje od palety Game Boya
+const CRT_NEXT: Record<Crt, Crt> = { off: 'crt', crt: 'gb', gb: 'monitor', monitor: 'off' }
+const CRT_TITLE: Record<Crt, string> = { off: 'MODERN', crt: 'CRT', gb: 'GAME BOY', monitor: 'MONITOR' }
+const SCREEN_LABEL: Record<Crt, string> = { off: 'Wył.', crt: 'CRT', gb: 'Game Boy', monitor: 'Monitor' }
 
 function useCrt(): [Crt, () => void, (m: Crt) => void] {
   const [mode, setMode] = useState<Crt>(() => {
     try {
       const v = localStorage.getItem(CRT_KEY)
-      return v === 'crt' || v === 'phosphor' || v === 'monitor' ? v : 'off'
+      return v === 'off' || v === 'crt' || v === 'monitor' ? v : 'gb'
     } catch {
-      return 'off'
+      return 'gb'
     }
   })
   useEffect(() => {
     const el = document.documentElement
-    el.classList.toggle('crt', mode !== 'off')
-    el.classList.toggle('phosphor', mode === 'phosphor')
+    el.classList.toggle('crt', mode === 'crt' || mode === 'monitor')
     el.classList.toggle('monitor', mode === 'monitor')
+    el.classList.toggle('gb', mode === 'gb')
     try {
       localStorage.setItem(CRT_KEY, mode)
     } catch {
@@ -208,7 +210,7 @@ export default function App() {
     return (
       <CrtScreen monitor={crt === 'monitor'}>
       <div className="empty-state">
-        <div style={{ marginBottom: 24 }}>
+        <div className="empty-logo" style={{ marginBottom: 24 }}>
           <button type="button" className="brand-home" onClick={() => (READ_ONLY ? location.assign('/') : setStarted(false))} title="Wróć do menu startowego" aria-label="Wróć do menu startowego">
             <Logo80 />
           </button>
@@ -234,6 +236,8 @@ export default function App() {
         </div>
         {addingFirst && <DesignerForm onClose={() => setAddingFirst(false)} />}
         <ImportInput fileRef={fileRef} />
+        <OverlayRoot />
+        <GbFilter />
       </div>
       </CrtScreen>
     )
@@ -297,7 +301,7 @@ export default function App() {
                 <span id="screen-mode-label">Ekran</span>
               </div>
               <div className="seg" role="radiogroup" aria-labelledby="screen-mode-label">
-                {(['off', 'crt', 'phosphor', 'monitor'] as Crt[]).map(m => (
+                {(['off', 'crt', 'gb', 'monitor'] as Crt[]).map(m => (
                   <button key={m} role="radio" aria-checked={crt === m} className={crt === m ? 'on' : ''} onClick={() => setCrt(m)}>
                     {SCREEN_LABEL[m]}
                   </button>
@@ -328,6 +332,8 @@ export default function App() {
       {hero && <HeroCard key={hero.id} world={world} designer={hero} onClose={() => setHeroId(null)} />}
       <ImportInput fileRef={fileRef} />
       <OverflowTip />
+      <OverlayRoot />
+      <GbFilter />
     </div>
     </CrtScreen>
   )

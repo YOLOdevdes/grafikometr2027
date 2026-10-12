@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { actions, db } from '../db'
 import { READ_ONLY } from '../mode'
 import type { Designer, Todo } from '../domain/types'
+import { inOverlay } from './gbPalette'
 
 type Px = [x: number, y: number, w: number, h: number]
 
@@ -95,7 +96,7 @@ export function TodoNotebook({ designer, onClose }: { designer: Designer; onClos
   }
   const left = todos.filter(t => !t.done).length
 
-  return (
+  return inOverlay(
     <div className="overlay" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="nb" role="dialog" aria-modal="true" aria-label={`Zadania: ${designer.name}`}>
         <div className="nb-spiral" aria-hidden="true">{Array.from({ length: 11 }, (_, i) => <i key={i} />)}</div>

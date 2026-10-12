@@ -12,6 +12,7 @@ import { cardArtFor, useCardArt } from './cardArt'
 import { lookOf } from './spriteSheets'
 import { Sprite } from './Sprite'
 import { READ_ONLY } from '../mode'
+import { inOverlay } from './gbPalette'
 
 const UNIT = 0.5 // jednostka planowania: pół etatu
 
@@ -86,7 +87,7 @@ export function HeroCard({ world, designer, onClose }: { world: FullWorld; desig
     )
   }
 
-  return (
+  return inOverlay(
     <div className="overlay" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="card-stage">
         <div className={`pxcard role-${designer.cls} ${flipped ? 'flipped' : ''}`} onClick={() => setFlipped(f => !f)} role="group" aria-label={`Karta: ${designer.name}`}>
