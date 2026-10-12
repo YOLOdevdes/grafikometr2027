@@ -6,3 +6,5 @@ assets-src
 .data
 .vercel
 *.tsbuildinfo
+.env*
+!.env.example
