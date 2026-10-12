@@ -1,19 +1,23 @@
-# Pipolator — specyfikacja v0.1
+# Grafikometr2027 (dawniej Pipolator) — specyfikacja v0.1
 
 Narzędzie do planowania ludzi w dziale design i wczesnego wykrywania potrzeby rekrutacji.
-Jeden użytkownik (head of design). Stylistyka: pixel art + gra karciana.
+Jeden użytkownik (head of design). Stylistyka: pixel art, retro-gra, efekt CRT.
 
 ## 1. Słownik
 
-| Pojęcie w grze | Pojęcie biznesowe |
+Interfejs używa nazewnictwa projektowego (stylistyka retro-gry zostaje tylko w warstwie wizualnej).
+W kodzie część identyfikatorów ma historyczne nazwy — w nawiasach.
+
+| W interfejsie | Znaczenie |
 |---|---|
-| Bohater / karta | Designer (osoba, którą planujemy) |
-| Klasa | Rola: Medior PD, Senior PD, UX Researcher |
-| Quest | Projekt (jedna faza = jeden projekt) |
-| Zlecenie | Zapotrzebowanie — slot designerski w projekcie, pusty lub obsadzony |
-| Najemnik | Rola symulowana: QA, BA, Dev, APM, APE (tylko wizualizacja składu) |
-| Odpoczynek | Nieobecność (urlop, L4, szkolenie) |
-| Kronika | Historia projektów osoby |
+| Osoba / karta osoby (`Designer`, `HeroCard`) | Designer, którego planujemy |
+| Rola (`cls`) | Medior PD, Senior PD, UX Researcher |
+| Projekt (`Project`, `QuestsScreen`) | Jedna faza projektu klienta (Presales / Discovery / Delivery) |
+| Slot (`Demand`) | Zapotrzebowanie na designera w projekcie — wolny lub obsadzony |
+| Pozostałe role (`Mercenary`) | QA, BA, Dev, APM, APE — tylko wizualizacja składu |
+| Nieobecność (`Absence`) | Urlop, L4, szkolenie |
+| Historia projektów (`chronicle`) | Projekty, w których osoba brała udział |
+| Harmonogram, Zapotrzebowanie, Projekty, Zespół, Rekrutacja, Nieobecności | Zakładki aplikacji |
 
 ## 2. Model danych
 
@@ -121,7 +125,7 @@ generowane `python3 scripts/build-lands.py`. Kontynent → kraina mapowany w `sr
    Stany animacji = stany osoby: idle (wolny), praca (przypisany), zmęczony (>1.0 FTE), śpi przy ognisku (urlop).
 2. **Karta bohatera (zbliżenie po kliknięciu)** — komiksowa ilustracja cartoon (ref: karty „Fantasy Craft”):
    grube czarne kontury, płaskie nasycone kolory, raster/kreskowanie, humor, dominujący kolor klasy.
-   Układ karty: nagłówek „Pipolator · №”, ikona klasy, tytuł-pseudonim, ilustracja, 3 statystyki + serce.
+   Układ karty: nagłówek „Grafikometr2027 · №”, ikona klasy, tytuł-pseudonim, ilustracja, 3 statystyki + serce.
 
 Statystyki karty: ⚔ aktywne projekty · 📜 projekty w kronice · ⏳ tygodnie do zwolnienia · ❤ wolne FTE w tym tygodniu.
 
@@ -155,6 +159,8 @@ Placeholder: `public/art/senior-pd-placeholder.png` (gpt-image przez Figma AI). 
 - Drag & drop: dnd-kit. Daty: date-fns.
 - Pixel art: czcionka Pixelify Sans (UI) + Press Start 2P (nagłówki), ramki CSS, `image-rendering: pixelated`.
 - Ilustracje: upload per osoba + domyślna ilustracja klasy.
+- Dźwięk kliku: Mixkit „Modern click box check” (`public/sfx/click.wav`, poza repo — licencja Mixkit), Web Audio, wyciszenie w nagłówku.
+- Muzyka: radio YouTube „Datawave FM” (Nightride FM) przez IFrame API, głośność 30%, widoczny mini-odtwarzacz w rogu (wymóg regulaminu YouTube), wł./wył. w menu startowym, nagłówku i na radiu; wymaga internetu.
 - Później opcjonalnie: przeniesienie na Vercel + baza, jeśli narzędzie ma trafić do zespołu.
 
 ## 9. Poza zakresem v1

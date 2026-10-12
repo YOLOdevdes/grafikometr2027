@@ -99,7 +99,7 @@ export function CrtScreen({ children, monitor }: { children: ReactNode; monitor:
           <div className="monitor-vents" />
           <div className="monitor-chin">
             <div className="monitor-badge">
-              <span className="monitor-brand">PIPOLATOR</span>
+              <span className="monitor-brand">GRAFIKOMETR<span className="logo-year">2027</span></span>
               <span className="monitor-model">TSH-1987 · 14″ COLOR DISPLAY</span>
             </div>
             <div className="monitor-knobs">

@@ -2,11 +2,11 @@ import { addMonths, format, startOfMonth } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import { useMemo, useState } from 'react'
 import type { FullWorld } from '../db'
-import { absenceWarnings, demandLoad, overloadRanges } from '../domain/availability'
-import { addDaysISO, daysBetween, fmtRange, fromISO, maxISO, minISO, mondayOf, overlaps, toISO, todayISO } from '../domain/dates'
+import { demandLoad, overloadRanges } from '../domain/availability'
+import { addDaysISO, daysBetween, fmtRange, fromISO, maxISO, mondayOf, overlaps, toISO, todayISO } from '../domain/dates'
 import type { Demand, Designer, ISODate } from '../domain/types'
 import { ABSENCE_LABEL, CLASS_META, PHASE_LABEL } from '../domain/types'
-import { ClassBadge, designerState, fmtFte } from '../ui/common'
+import { designerState, fmtFte } from '../ui/common'
 import { lookOf } from '../ui/spriteSheets'
 import { Sprite } from '../ui/Sprite'
 import { JourneyRow } from './JourneyRow'
@@ -81,73 +81,21 @@ export function MapScreen({ world, onOpenDemand, onOpenHero }: Props) {
   const pos = (d: ISODate) => (Math.max(0, Math.min(span, daysBetween(start, d))) / span) * 100
   const cols = useMemo(() => columns(zoom, start, end), [zoom, start, end])
 
-  const projects = new Map(world.projects.map(p => [p.id, p]))
   const heroes = world.designers.filter(d => !d.archivedAt)
   const quests = world.projects
     .filter(p => !p.archivedAt && overlaps(p.from, p.to, start, addDaysISO(end, -1)))
     .sort((a, b) => (a.client ?? a.name).localeCompare(b.client ?? b.name) || a.from.localeCompare(b.from))
 
-  const open = world.demands
-    .filter(d => !d.designerId && d.to >= today)
-    .sort((a, b) => a.from.localeCompare(b.from))
-  const warnings = world.demands
-    .filter(d => d.designerId && d.to >= today)
-    .flatMap(d => absenceWarnings(world, d).filter(a => a.to >= today).map(a => ({ d, a })))
-    .sort((x, y) => x.a.from.localeCompare(y.a.from))
-
   const shift = (dir: number) => setStart(s => addDaysISO(s, dir * Math.round(span / 3)))
 
   return (
-    <div className="split">
-      <aside>
-        <div className="win">
-          <div className="win-title">TABLICA ZLECEŃ</div>
-          {open.length === 0 && <small>Wszystkie zlecenia obsadzone. Drużyna w komplecie!</small>}
-          {open.map(d => {
-            const p = projects.get(d.projectId)
-            const startsIn = daysBetween(today, d.from)
-            return (
-              <div key={d.id} className={`win flat quest-card ${p?.upcoming ? 'upcoming' : ''}`} onClick={() => onOpenDemand(d)}>
-                <div className="t">
-                  <ClassBadge cls={d.cls} fte={demandLoad(d)} />
-                  <span className="chip">{p && PHASE_LABEL[p.phase].toUpperCase()}</span>
-                </div>
-                <div>
-                  <b>{p?.name}</b> {p?.upcoming && <span className="chip upcoming">NADCHODZĄCY</span>}
-                </div>
-                <small>
-                  {fmtRange(d.from, d.to)} ·{' '}
-                  {startsIn <= 0 ? <span className="no">trwa — slot pusty!</span> : startsIn <= 14 ? <span className="warn">start za {startsIn} dni</span> : `start za ${startsIn} dni`}
-                </small>
-              </div>
-            )
-          })}
-        </div>
-
-        {warnings.length > 0 && (
-          <div className="win" style={{ marginTop: 22 }}>
-            <div className="win-title">UWAGI</div>
-            {warnings.slice(0, 8).map(({ d, a }) => {
-              const who = world.designers.find(x => x.id === d.designerId)
-              const p = projects.get(d.projectId)
-              return (
-                <div key={d.id + a.id} style={{ fontSize: 13, marginBottom: 8, cursor: 'pointer' }} onClick={() => onOpenDemand(d)}>
-                  <span className="warn">⚠</span> <b>{who?.name}</b> — {ABSENCE_LABEL[a.type].toLowerCase()} {fmtRange(maxISO(a.from, d.from), minISO(a.to, d.to))}
-                  <br />
-                  <small>slot w {p?.name} ({p && PHASE_LABEL[p.phase]}) pusty w tym czasie</small>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </aside>
-
+    <div>
       <section>
         <div className="tl-toolbar">
-          <h2 style={{ fontSize: 14 }}>MAPA KAMPANII</h2>
+          <h2 style={{ fontSize: 14 }}>HARMONOGRAM</h2>
           <div className="view-toggle">
-            <button className={`sm ${view === 'quests' ? 'on' : ''}`} onClick={() => setView('quests')}>Questy</button>
-            <button className={`sm ${view === 'heroes' ? 'on' : ''}`} onClick={() => setView('heroes')}>Bohaterowie</button>
+            <button className={`sm ${view === 'quests' ? 'on' : ''}`} onClick={() => setView('quests')}>Projekty</button>
+            <button className={`sm ${view === 'heroes' ? 'on' : ''}`} onClick={() => setView('heroes')}>Osoby</button>
           </div>
           <span className="dim">{fmtRange(start, addDaysISO(end, -1))}</span>
           <span className="spacer" />
@@ -165,7 +113,7 @@ export function MapScreen({ world, onOpenDemand, onOpenHero }: Props) {
         <div className="win tl">
           <div className="tl-head">
             <div style={{ padding: '8px 10px', fontSize: 12 }} className="head dim">
-              {view === 'quests' ? `QUESTY (${quests.length})` : `DRUŻYNA (${heroes.length})`}
+              {view === 'quests' ? `PROJEKTY (${quests.length})` : `ZESPÓŁ (${heroes.length})`}
             </div>
             <div className="tl-cols">
               {cols.map(c => (
@@ -182,7 +130,7 @@ export function MapScreen({ world, onOpenDemand, onOpenHero }: Props) {
                 <JourneyRow world={world} project={p} start={start} end={end} pos={pos} onOpenDemand={onOpenDemand} />
               </div>
             ))}
-          {view === 'quests' && quests.length === 0 && <p className="dim" style={{ padding: 16 }}>Brak questów w tym okresie.</p>}
+          {view === 'quests' && quests.length === 0 && <p className="dim" style={{ padding: 16 }}>Brak projektów w tym okresie.</p>}
 
           {view === 'heroes' && heroes.map(h => (
             <HeroRow key={h.id} world={world} hero={h} start={start} end={end} pos={pos} cols={cols} zoom={zoom} onOpenDemand={onOpenDemand} onOpenHero={onOpenHero} />
@@ -197,10 +145,10 @@ export function MapScreen({ world, onOpenDemand, onOpenHero }: Props) {
           {Object.values(CLASS_META).map(m => (
             <span key={m.short}><i style={{ background: m.color }} />{m.short}</span>
           ))}
-          <span><i style={{ background: 'repeating-linear-gradient(45deg,#fff5 0 3px,transparent 3px 6px)' }} />Odpoczynek</span>
+          <span><i style={{ background: 'repeating-linear-gradient(45deg,#fff5 0 3px,transparent 3px 6px)' }} />Nieobecność</span>
           <span><i style={{ background: '#e0493a55', borderColor: 'var(--red)' }} />Przeciążenie</span>
           {view === 'quests' ? (
-            <span>Ścieżka w kolorze roli · czerwona = wolny slot · bohater stoi tam, gdzie jest dziś · mgła = poza questem</span>
+            <span>Postać = osoba w projekcie, stoi na dzisiejszej dacie · szara z czerwoną etykietą = wolny slot · przyciemnione = poza czasem projektu</span>
           ) : (
             <span>Paski w kolorze projektu · kreskowane = nadchodzący · cienki = 0.5 FTE</span>
           )}
@@ -224,7 +172,7 @@ function HeroRow({ world, hero, start, end, pos, cols, zoom, onOpenDemand, onOpe
 
   return (
     <div className="tl-row" style={{ height }}>
-      <div className="tl-who" onClick={() => onOpenHero(hero)} title="Otwórz kartę bohatera">
+      <div className="tl-who" onClick={() => onOpenHero(hero)} title="Otwórz kartę osoby">
         <Sprite cls={hero.cls} look={lookOf(hero)} state={designerState(world, hero)} scale={2} badge={false} />
         <div className="nm">
           <b>{hero.name}</b>

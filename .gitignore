@@ -4,3 +4,4 @@ dist
 *.local
 assets-src
 public/sprites
+public/sfx

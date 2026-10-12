@@ -5,22 +5,28 @@ import { addDaysISO, fmt, mondayOf, todayISO, workdays } from './domain/dates'
 import { buildForecast, recruitAlerts } from './domain/forecast'
 import type { Demand, Designer } from './domain/types'
 import { CLASS_META } from './domain/types'
+import { BoardScreen } from './screens/BoardScreen'
 import { ForgeScreen } from './screens/ForgeScreen'
 import { MapScreen } from './screens/MapScreen'
 import { PartyScreen } from './screens/PartyScreen'
 import { QuestsScreen } from './screens/QuestsScreen'
 import { RestScreen } from './screens/RestScreen'
+import { TitleScreen, type TitleItem } from './screens/TitleScreen'
 import { seedDemo } from './seed'
 import { AssignModal } from './ui/AssignModal'
 import { HeroCard } from './ui/HeroCard'
 import { CrtScreen } from './ui/Crt'
+import { isMusicOn, onMusicChange, setMusicOn } from './ui/radio'
+import { isMuted, setMuted } from './ui/sfx'
+import { Logo80 } from './ui/Logo80'
 import { Sprite } from './ui/Sprite'
 import { fmtFte } from './ui/common'
 
-type Tab = 'map' | 'quests' | 'party' | 'forge' | 'rest'
+type Tab = 'map' | 'board' | 'quests' | 'party' | 'forge' | 'rest'
 type Crt = 'off' | 'crt' | 'phosphor' | 'monitor'
 const CRT_KEY = 'pipolator.crt'
 const CRT_NEXT: Record<Crt, Crt> = { off: 'crt', crt: 'phosphor', phosphor: 'monitor', monitor: 'off' }
+const CRT_TITLE: Record<Crt, string> = { off: 'MODERN', crt: 'CRT', phosphor: 'PHOSPHOR', monitor: 'MONITOR' }
 const CRT_LABEL: Record<Crt, string> = { off: 'CRT: wył.', crt: 'CRT: wł.', phosphor: 'CRT: fosfor', monitor: 'CRT: monitor' }
 
 function useCrt(): [Crt, () => void] {
@@ -46,11 +52,12 @@ function useCrt(): [Crt, () => void] {
   return [mode, () => setMode(m => CRT_NEXT[m])]
 }
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'map', label: 'Mapa' },
-  { id: 'quests', label: 'Questy' },
-  { id: 'party', label: 'Drużyna' },
-  { id: 'forge', label: 'Kuźnia' },
-  { id: 'rest', label: 'Odpoczynek' },
+  { id: 'map', label: 'Harmonogram' },
+  { id: 'board', label: 'Zapotrzebowanie' },
+  { id: 'quests', label: 'Projekty' },
+  { id: 'party', label: 'Zespół' },
+  { id: 'forge', label: 'Rekrutacja' },
+  { id: 'rest', label: 'Nieobecności' },
 ]
 
 export default function App() {
@@ -59,6 +66,20 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('map')
   const [demandId, setDemandId] = useState<string | null>(null)
   const [heroId, setHeroId] = useState<string | null>(null)
+  const [started, setStarted] = useState(false)
+  const [muted, setMutedState] = useState(isMuted)
+  const [music, setMusic] = useState(isMusicOn)
+  useEffect(() => {
+    const off = onMusicChange(setMusic)
+    return () => {
+      off()
+    }
+  }, [])
+  const toggleMusic = () => setMusicOn(!music)
+  const toggleMute = () => {
+    setMuted(!muted)
+    setMutedState(!muted)
+  }
   const fileRef = useRef<HTMLInputElement>(null)
 
   const hud = useMemo(() => {
@@ -76,18 +97,37 @@ export default function App() {
 
   if (!world) return null
 
+  if (!started) {
+    const empty = world.designers.length === 0 && world.projects.length === 0
+    const items: TitleItem[] = [
+      ...(empty
+        ? [
+            { label: 'NEW GAME', action: () => setStarted(true) },
+            { label: 'DEMO GAME', action: async () => { await seedDemo(); setStarted(true) } },
+          ]
+        : [{ label: 'START GAME', action: () => setStarted(true) }]),
+      { label: `SCREEN: ${CRT_TITLE[crt]}`, action: cycleCrt },
+      { label: `MUSIC: ${music ? 'ON' : 'OFF'}`, action: toggleMusic },
+    ]
+    return (
+      <CrtScreen monitor={crt === 'monitor'}>
+        <TitleScreen items={items} />
+      </CrtScreen>
+    )
+  }
+
   if (world.designers.length === 0 && world.projects.length === 0) {
     return (
       <CrtScreen monitor={crt === 'monitor'}>
       <div className="empty-state">
-        <div className="logo" style={{ fontSize: 34, marginBottom: 24 }}>PIPOLATOR</div>
+        <div style={{ marginBottom: 24 }}><Logo80 /></div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 24 }}>
           <Sprite cls="MEDIOR_PD" look={{ g: 'M', skin: 2, outfit: 1 }} scale={4} />
           <Sprite cls="SENIOR_PD" look={{ g: 'F', skin: 1, outfit: 2 }} state="work" scale={4} />
           <Sprite cls="UX_RESEARCHER" look={{ g: 'F', skin: 3, outfit: 3 }} scale={4} />
         </div>
         <div className="win">
-          <p>Twoja drużyna jeszcze się nie zebrała.</p>
+          <p>Nie ma jeszcze żadnych osób ani projektów.</p>
           <div className="row-actions" style={{ justifyContent: 'center' }}>
             <button className="primary" onClick={seedDemo}>Wczytaj dane demo</button>
             <button onClick={() => setTab('party')}>Zacznij od zera</button>
@@ -114,7 +154,7 @@ export default function App() {
     const blob = new Blob([await exportJSON()], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `pipolator-${todayISO()}.json`
+    a.download = `grafikometr2027-${todayISO()}.json`
     a.click()
     URL.revokeObjectURL(a.href)
   }
@@ -123,7 +163,7 @@ export default function App() {
     <CrtScreen monitor={crt === 'monitor'}>
     <div className="app">
       <header className="topbar">
-        <div className="logo">PIPOLATOR</div>
+        <Logo80 size="sm" />
         <nav className="tabs">
           {TABS.map(t => (
             <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>
@@ -138,12 +178,12 @@ export default function App() {
               <b>{Math.round(hud.util * 100)}%</b>
               <div className="meter"><i style={{ width: `${Math.min(100, hud.util * 100)}%`, background: hud.util > 1 ? 'var(--red)' : hud.util > 0.9 ? 'var(--amber)' : 'var(--green)' }} /></div>
             </div>
-            <div className="win stat" style={{ cursor: 'pointer' }} onClick={() => setTab('map')}>
-              <small>Otwarte zlecenia</small>
+            <div className="win stat" style={{ cursor: 'pointer' }} onClick={() => setTab('board')}>
+              <small>Wolne sloty</small>
               <b className={hud.open ? 'warn' : 'ok'}>{hud.open}</b>
             </div>
             <div className={`win stat ${hud.top?.scope === 'CERTAIN' ? 'alert' : ''}`} onClick={() => setTab('forge')} style={{ cursor: 'pointer' }}>
-              <small>Kuźnia</small>
+              <small>Rekrutacja</small>
               {hud.top ? (
                 <b style={{ fontSize: 14 }}>
                   −{fmtFte(hud.top.peakGap)} {CLASS_META[hud.top.cls].short}
@@ -157,6 +197,12 @@ export default function App() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <button className="sm" onClick={download} title="Pobierz kopię zapasową (JSON)">⬇ Backup</button>
               <button className="sm" onClick={() => fileRef.current?.click()} title="Wczytaj kopię zapasową">⬆ Import</button>
+              <button className={`sm ${music ? 'on' : ''}`} onClick={toggleMusic} title={music ? 'Wyłącz radio' : 'Włącz radio Datawave FM'} aria-pressed={music}>
+                {music ? '📻 Muzyka: wł.' : '📻 Muzyka: wył.'}
+              </button>
+              <button className="sm" onClick={toggleMute} title={muted ? 'Włącz dźwięk kliku' : 'Wycisz dźwięk kliku'} aria-pressed={!muted}>
+                {muted ? '🔇 Dźwięk: wył.' : '🔊 Dźwięk: wł.'}
+              </button>
               <button className={`sm ${crt !== 'off' ? 'on' : ''}`} onClick={cycleCrt} title="Efekt monitora: wył. → CRT → fosfor → monitor">📺 {CRT_LABEL[crt]}</button>
             </div>
           </div>
@@ -165,6 +211,7 @@ export default function App() {
 
       <main className="content">
         {tab === 'map' && <MapScreen world={world} onOpenDemand={openDemand} onOpenHero={openHero} />}
+        {tab === 'board' && <BoardScreen world={world} onOpenDemand={openDemand} />}
         {tab === 'quests' && <QuestsScreen world={world} onOpenDemand={openDemand} />}
         {tab === 'party' && <PartyScreen world={world} onOpenHero={openHero} />}
         {tab === 'forge' && <ForgeScreen world={world} />}

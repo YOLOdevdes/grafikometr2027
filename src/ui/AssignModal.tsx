@@ -12,7 +12,7 @@ function StatusText({ ev }: { ev: CandidateEval }) {
   const conflicts = ev.conflicts.map(c => `${c.label} ${fmtRange(c.from, c.to)}`).join(' · ')
   switch (ev.status) {
     case 'FREE':
-      return <div className="st ok">✓ Wolny{ev.classMismatch && <small className="warn">inna klasa niż zlecenie</small>}</div>
+      return <div className="st ok">✓ Wolny{ev.classMismatch && <small className="warn">inna rola niż slot</small>}</div>
     case 'FREE_FROM':
       return <div className="st wait">⏳ Wolny od {fmt(ev.freeFrom!)}<small>{conflicts}</small></div>
     case 'PARTIAL':
@@ -53,14 +53,14 @@ export function AssignModal({ world, demand, onClose }: { world: FullWorld; dema
     onClose()
   }
   const remove = async () => {
-    if (confirm('Usunąć to zlecenie? Jeśli ktoś już w nim pracował, zostanie to w jego kronice.')) {
+    if (confirm('Usunąć ten slot? Jeśli ktoś już w nim pracował, zostanie to w jego historii projektów.')) {
       await actions.deleteDemand(demand.id)
       onClose()
     }
   }
 
   return (
-    <Modal onClose={onClose} wide title="OBSADŹ ZLECENIE">
+    <Modal onClose={onClose} wide title="OBSADŹ SLOT">
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
         <ClassBadge cls={draft.cls} fte={draft.fte + (draft.overtimeFte ?? 0)} />
         <b>{project?.name}</b>
@@ -71,7 +71,7 @@ export function AssignModal({ world, demand, onClose }: { world: FullWorld; dema
 
       <div className="form-grid" style={{ gridTemplateColumns: 'repeat(5, minmax(0,1fr))' }}>
         <label className="field">
-          Klasa
+          Rola
           <select value={draft.cls} onChange={e => setDraft({ ...draft, cls: e.target.value as DesignerClass })}>
             {CLASSES.map(c => <option key={c} value={c}>{CLASS_META[c].short}</option>)}
           </select>
@@ -101,7 +101,7 @@ export function AssignModal({ world, demand, onClose }: { world: FullWorld; dema
       {dirty && (
         <div className="row-actions" style={{ marginTop: 8 }}>
           <button className="ghost" onClick={() => setDraft(demand)}>Cofnij zmiany</button>
-          <button className="primary" onClick={save}>Zapisz zlecenie</button>
+          <button className="primary" onClick={save}>Zapisz slot</button>
         </div>
       )}
 
@@ -121,7 +121,7 @@ export function AssignModal({ world, demand, onClose }: { world: FullWorld; dema
       <div style={{ display: 'flex', alignItems: 'center', marginTop: 18 }}>
         <div className="head" style={{ fontSize: 12, color: 'var(--accent)' }}>KANDYDACI</div>
         <label style={{ marginLeft: 'auto', fontSize: 13, display: 'flex', gap: 6, alignItems: 'center' }}>
-          <input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} /> pokaż wszystkie klasy
+          <input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} /> pokaż wszystkie role
         </label>
       </div>
       {visible
@@ -148,11 +148,11 @@ export function AssignModal({ world, demand, onClose }: { world: FullWorld; dema
           </div>
         ))}
       {ranked.every(r => r.status !== 'FREE' || r.classMismatch) && (
-        <p className="hint">Brak w pełni wolnej osoby tej klasy — niepokryte zlecenie zasila prognozę w Kuźni.</p>
+        <p className="hint">Brak w pełni wolnej osoby w tej roli — nieobsadzony slot trafia do prognozy rekrutacji.</p>
       )}
 
       <div className="row-actions">
-        <button className="danger" onClick={remove}>Usuń zlecenie</button>
+        <button className="danger" onClick={remove}>Usuń slot</button>
         <span style={{ flex: 1 }} />
         <button onClick={onClose}>Zamknij</button>
       </div>

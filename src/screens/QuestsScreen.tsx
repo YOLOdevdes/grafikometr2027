@@ -5,10 +5,12 @@ import { addDaysISO, fmtRange, todayISO } from '../domain/dates'
 import type { Demand, DesignerClass, Phase, Project, Region } from '../domain/types'
 import { ABSENCE_LABEL, CLASSES, CLASS_META, MERC_META, MERC_ROLES, PHASES, PHASE_LABEL, REGIONS, REGION_META } from '../domain/types'
 import { ClassBadge, Modal, designerState, fmtFte } from '../ui/common'
+import { QUEST_COLORS, QuestWizard } from '../ui/QuestWizard'
+import { COUNTRY_SUGGESTIONS, regionForCountry } from '../domain/countries'
+import { NEXT_PHASE, PHASE_DAYS } from '../domain/templates'
 import { lookOf } from '../ui/spriteSheets'
 import { Sprite } from '../ui/Sprite'
 
-const COLORS = ['#e0a458', '#6cc4a1', '#7aa2f7', '#f78c6c', '#c792ea', '#ffcb6b', '#89ddff', '#f07178', '#c3e88d', '#ff9cac']
 
 type Filter = 'ACTIVE' | 'UPCOMING' | 'ENDED' | 'ARCHIVED'
 
@@ -23,7 +25,8 @@ function inFilter(p: Project, f: Filter, today: string) {
 export function QuestsScreen({ world, onOpenDemand }: { world: FullWorld; onOpenDemand: (d: Demand) => void }) {
   const today = todayISO()
   const [filter, setFilter] = useState<Filter>('ACTIVE')
-  const [editing, setEditing] = useState<Project | 'new' | null>(null)
+  const [editing, setEditing] = useState<Project | null>(null)
+  const [wizard, setWizard] = useState<Partial<Project> | null>(null)
   const [addingTo, setAddingTo] = useState<Project | null>(null)
 
   const match = (p: Project) => inFilter(p, filter, today)
@@ -34,32 +37,40 @@ export function QuestsScreen({ world, onOpenDemand }: { world: FullWorld; onOpen
   return (
     <div>
       <div className="tl-toolbar">
-        <h2 style={{ fontSize: 14 }}>QUESTY</h2>
+        <h2 style={{ fontSize: 14 }}>PROJEKTY</h2>
         {(['ACTIVE', 'UPCOMING', 'ENDED', 'ARCHIVED'] as Filter[]).map(f => (
           <button key={f} className={`sm ${filter === f ? 'on' : ''}`} onClick={() => setFilter(f)}>
             {{ ACTIVE: 'Trwające', UPCOMING: 'Nadchodzące', ENDED: 'Zakończone', ARCHIVED: 'Archiwum' }[f]} ({count(f)})
           </button>
         ))}
         <span className="spacer" />
-        <button className="primary" onClick={() => setEditing('new')}>+ Nowy quest</button>
+        <button className="primary" onClick={() => setWizard({})}>+ Nowy projekt</button>
       </div>
 
-      {list.length === 0 && <p className="dim">Pusto. Dodaj quest przyciskiem „+ Nowy quest”.</p>}
+      {list.length === 0 && <p className="dim">Brak projektów. Dodaj pierwszy przyciskiem „+ Nowy projekt”.</p>}
 
       <div className="quest-grid">
         {list.map(p => (
-          <QuestCard key={p.id} world={world} project={p} onEdit={() => setEditing(p)} onAddDemand={() => setAddingTo(p)} onOpenDemand={onOpenDemand} />
+          <QuestCard key={p.id} world={world} project={p} onEdit={() => setEditing(p)} onAddDemand={() => setAddingTo(p)} onNextPhase={() => setWizard(nextPhaseOf(p))} onOpenDemand={onOpenDemand} />
         ))}
       </div>
 
-      {editing && <ProjectForm world={world} project={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />}
+      {editing && <ProjectForm world={world} project={editing} onClose={() => setEditing(null)} />}
+      {wizard && <QuestWizard world={world} prefill={wizard} onClose={() => setWizard(null)} />}
       {addingTo && <NewDemandForm project={addingTo} onClose={() => setAddingTo(null)} />}
     </div>
   )
 }
 
-function QuestCard({ world, project: p, onEdit, onAddDemand, onOpenDemand }: {
-  world: FullWorld; project: Project; onEdit: () => void; onAddDemand: () => void; onOpenDemand: (d: Demand) => void
+/** Kolejna faza tego samego projektu: te same dane klienta, start dzień po końcu poprzedniej. */
+function nextPhaseOf(p: Project): Partial<Project> {
+  const phase = NEXT_PHASE[p.phase]
+  const from = addDaysISO(p.to, 1)
+  return { name: p.name, client: p.client ?? p.name, country: p.country, region: p.region, color: p.color, owner: p.owner, phase, from, to: addDaysISO(from, PHASE_DAYS[phase]) }
+}
+
+function QuestCard({ world, project: p, onEdit, onAddDemand, onNextPhase, onOpenDemand }: {
+  world: FullWorld; project: Project; onEdit: () => void; onAddDemand: () => void; onNextPhase: () => void; onOpenDemand: (d: Demand) => void
 }) {
   const demands = world.demands.filter(d => d.projectId === p.id).sort((a, b) => a.cls.localeCompare(b.cls) || a.from.localeCompare(b.from))
   const mercs = world.mercenaries.filter(m => m.projectId === p.id)
@@ -77,7 +88,8 @@ function QuestCard({ world, project: p, onEdit, onAddDemand, onOpenDemand }: {
             {p.upcoming && <span className="chip upcoming">NADCHODZĄCY</span>}
             {empty > 0 && <span className="chip" style={{ borderColor: 'var(--red)', color: 'var(--red)' }}>{empty} wolne sloty</span>}
           </div>
-          <small>{fmtRange(p.from, p.to)}</small>
+          <small>{fmtRange(p.from, p.to)}{p.owner ? ` · opiekun: ${p.owner}` : ''}</small>
+          {p.notes && <div className="quest-notes" title={p.notes}>{p.notes}</div>}
         </div>
         <button className="sm ghost" onClick={onEdit} title="Edytuj quest">✎</button>
       </header>
@@ -101,7 +113,10 @@ function QuestCard({ world, project: p, onEdit, onAddDemand, onOpenDemand }: {
             </div>
           )
         })}
-        <button className="sm" style={{ marginTop: 10 }} onClick={onAddDemand}>+ Zapotrzebowanie</button>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          <button className="sm" onClick={onAddDemand}>+ Slot</button>
+          <button className="sm" onClick={onNextPhase} title="Nowy projekt dla tego samego klienta, startujący po końcu tej fazy">+ Następna faza</button>
+        </div>
 
         <div className="mercs">
           {MERC_ROLES.map(role => {
@@ -122,18 +137,15 @@ function QuestCard({ world, project: p, onEdit, onAddDemand, onOpenDemand }: {
   )
 }
 
-function ProjectForm({ world, project, onClose }: { world: FullWorld; project?: Project; onClose: () => void }) {
-  const today = todayISO()
-  const [p, setP] = useState<Partial<Project>>(
-    project ?? { name: '', phase: 'DISCOVERY', from: today, to: addDaysISO(today, 60), upcoming: false, region: 'EUROPE', color: COLORS[world.projects.length % COLORS.length] },
-  )
+function ProjectForm({ world, project, onClose }: { world: FullWorld; project: Project; onClose: () => void }) {
+  const [p, setP] = useState<Partial<Project>>(project)
   const clients = [...new Set(world.projects.map(x => x.client).filter(Boolean))] as string[]
 
   const save = async () => {
     if (!p.name?.trim()) return alert('Podaj nazwę')
     if (!p.from || !p.to || p.from > p.to) return alert('Sprawdź daty')
     const saved = await actions.saveProject({ ...(p as Project), name: p.name.trim() })
-    // przesunięcie dat questu przesuwa zlecenia, które pokrywały cały quest
+    // przesunięcie dat projektu przesuwa sloty, które pokrywały cały projekt
     if (project && (project.from !== saved.from || project.to !== saved.to)) {
       for (const d of world.demands.filter(d => d.projectId === project.id)) {
         const next = { ...d, from: d.from === project.from ? saved.from : d.from, to: d.to === project.to ? saved.to : d.to }
@@ -144,7 +156,7 @@ function ProjectForm({ world, project, onClose }: { world: FullWorld; project?: 
   }
 
   return (
-    <Modal onClose={onClose} title={project ? 'EDYTUJ QUEST' : 'NOWY QUEST'}>
+    <Modal onClose={onClose} title="EDYTUJ PROJEKT">
       <div className="form-grid">
         <label className="field">
           Nazwa
@@ -163,10 +175,12 @@ function ProjectForm({ world, project, onClose }: { world: FullWorld; project?: 
         </label>
         <label className="field">
           Kraj
-          <input value={p.country ?? ''} placeholder="np. Arabia Saudyjska" onChange={e => setP({ ...p, country: e.target.value || undefined })} />
+          <input list="countries" value={p.country ?? ''} placeholder="np. Arabia Saudyjska"
+            onChange={e => setP({ ...p, country: e.target.value || undefined, region: regionForCountry(e.target.value) ?? p.region })} />
+          <datalist id="countries">{COUNTRY_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
         </label>
         <label className="field">
-          Kontynent → kraina
+          Kontynent
           <select value={p.region ?? 'OTHER'} onChange={e => setP({ ...p, region: e.target.value as Region })}>
             {REGIONS.map(r => <option key={r} value={r}>{REGION_META[r].label} · {REGION_META[r].land}</option>)}
           </select>
@@ -174,7 +188,7 @@ function ProjectForm({ world, project, onClose }: { world: FullWorld; project?: 
         <label className="field">
           Kolor
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {COLORS.map(c => (
+            {QUEST_COLORS.map(c => (
               <button key={c} type="button" aria-label={c} onClick={() => setP({ ...p, color: c })}
                 style={{ background: c, width: 26, height: 26, padding: 0, outline: p.color === c ? '3px solid #fff' : 'none' }} />
             ))}
@@ -191,6 +205,14 @@ function ProjectForm({ world, project, onClose }: { world: FullWorld; project?: 
         <label className="full" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input type="checkbox" checked={!!p.upcoming} onChange={e => setP({ ...p, upcoming: e.target.checked })} />
           Nadchodzący — projekt jeszcze niepotwierdzony / dopiero ruszy (liczy się tylko do prognozy „z nadchodzącymi”)
+        </label>
+        <label className="field full">
+          Opiekun projektu
+          <input value={p.owner ?? ''} placeholder="PM / APM po stronie TSH" onChange={e => setP({ ...p, owner: e.target.value || undefined })} />
+        </label>
+        <label className="field full">
+          Notatki
+          <textarea rows={3} value={p.notes ?? ''} onChange={e => setP({ ...p, notes: e.target.value || undefined })} />
         </label>
       </div>
       <div className="row-actions">
@@ -221,10 +243,10 @@ function NewDemandForm({ project, onClose }: { project: Project; onClose: () => 
   }
 
   return (
-    <Modal onClose={onClose} title={`ZAPOTRZEBOWANIE · ${project.name}`}>
+    <Modal onClose={onClose} title={`NOWY SLOT · ${project.name}`}>
       <div className="form-grid">
         <label className="field">
-          Klasa
+          Rola
           <select value={cls} onChange={e => setCls(e.target.value as DesignerClass)}>
             {CLASSES.map(c => <option key={c} value={c}>{CLASS_META[c].label}</option>)}
           </select>
@@ -249,7 +271,7 @@ function NewDemandForm({ project, onClose }: { project: Project; onClose: () => 
           <input type="number" min={1} max={10} value={count} onChange={e => setCount(Math.max(1, Number(e.target.value)))} />
         </label>
       </div>
-      <p className="hint" style={{ textAlign: 'left' }}>Sloty pojawią się na Tablicy zleceń — obsadzisz je z walidacją dostępności.</p>
+      <p className="hint" style={{ textAlign: 'left' }}>Sloty pojawią się w zakładce Zapotrzebowanie — obsadzisz je tam z podglądem dostępności.</p>
       <div className="row-actions">
         <button onClick={onClose}>Anuluj</button>
         <button className="primary" onClick={save}>Dodaj</button>

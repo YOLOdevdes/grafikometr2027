@@ -19,7 +19,7 @@ export function RestScreen({ world }: { world: FullWorld }) {
   return (
     <div>
       <div className="tl-toolbar">
-        <h2 style={{ fontSize: 14 }}>ODPOCZYNEK</h2>
+        <h2 style={{ fontSize: 14 }}>NIEOBECNOŚCI</h2>
         <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13 }}>
           <input type="checkbox" checked={showPast} onChange={e => setShowPast(e.target.checked)} /> pokaż przeszłe
         </label>
@@ -30,10 +30,10 @@ export function RestScreen({ world }: { world: FullWorld }) {
       <div className="win">
         <table className="list">
           <thead>
-            <tr><th>Bohater</th><th>Typ</th><th>Termin</th><th>Dni rob.</th><th>Wpływ na questy</th><th /></tr>
+            <tr><th>Osoba</th><th>Typ</th><th>Termin</th><th>Dni rob.</th><th>Wpływ na projekty</th><th /></tr>
           </thead>
           <tbody>
-            {list.length === 0 && <tr><td colSpan={6} className="dim">Nikt nie odpoczywa. Podejrzane.</td></tr>}
+            {list.length === 0 && <tr><td colSpan={6} className="dim">Brak zaplanowanych nieobecności.</td></tr>}
             {list.map(a => {
               const d = name(a.designerId)
               const hit = world.demands.filter(dm => dm.designerId === a.designerId && overlaps(dm.from, dm.to, a.from, a.to))
@@ -72,7 +72,7 @@ function AbsenceForm({ world, absence, onClose }: { world: FullWorld; absence: P
   const [a, setA] = useState(absence)
   const heroes = world.designers.filter(d => !d.archivedAt)
   const save = async () => {
-    if (!a.designerId) return alert('Wybierz bohatera')
+    if (!a.designerId) return alert('Wybierz osobę')
     if (!a.from || !a.to || a.from > a.to) return alert('Sprawdź daty')
     await actions.saveAbsence(a as Absence)
     onClose()
@@ -81,7 +81,7 @@ function AbsenceForm({ world, absence, onClose }: { world: FullWorld; absence: P
     <Modal onClose={onClose} title={absence.id ? 'EDYTUJ NIEOBECNOŚĆ' : 'NOWA NIEOBECNOŚĆ'}>
       <div className="form-grid">
         <label className="field">
-          Bohater
+          Osoba
           <select autoFocus value={a.designerId ?? ''} onChange={e => setA({ ...a, designerId: e.target.value })}>
             <option value="" disabled>— wybierz —</option>
             {heroes.map(d => <option key={d.id} value={d.id}>{d.name} · {CLASS_META[d.cls].short}</option>)}

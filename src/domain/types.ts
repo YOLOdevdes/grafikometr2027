@@ -5,7 +5,7 @@ export type DesignerClass = 'SENIOR_PD' | 'MEDIOR_PD' | 'UX_RESEARCHER'
 export type MercenaryRole = 'QA' | 'BA' | 'DEV' | 'APM' | 'APE'
 export type Phase = 'PRESALES' | 'DISCOVERY' | 'DELIVERY'
 export type AbsenceType = 'VACATION' | 'SICK' | 'TRAINING' | 'OTHER'
-/** Kontynent klienta — wyznacza krainę, przez którą wędruje quest. */
+/** Kontynent klienta — wyznacza tło paska projektu na harmonogramie. */
 export type Region = 'EUROPE' | 'NORTH_AMERICA' | 'SOUTH_AMERICA' | 'MIDDLE_EAST' | 'AFRICA' | 'ASIA' | 'OCEANIA' | 'OTHER'
 
 /** Wygląd postaci w paczce sprite'ów: płeć, odcień skóry (1–3), strój (1–3). */
@@ -18,7 +18,7 @@ export interface Look {
 export interface Designer {
   id: string
   name: string
-  title?: string // pseudonim na karcie, np. „Pikselowa Paladynka”
+  title?: string // specjalizacja na karcie, np. „Design systemy”
   cls: DesignerClass
   baseFte: number
   illustration?: string // data URL albo ścieżka w /public
@@ -47,11 +47,13 @@ export interface Project {
   color: string
   region?: Region
   country?: string
+  owner?: string // opiekun projektu po stronie TSH (PM/APM)
+  notes?: string
   createdAt: string
   archivedAt?: string
 }
 
-/** Zlecenie — slot designerski w projekcie. */
+/** Slot designerski w projekcie (zapotrzebowanie, obsadzone lub wolne). */
 export interface Demand {
   id: string
   projectId: string
@@ -63,7 +65,7 @@ export interface Demand {
   designerId?: string
 }
 
-/** Najemnik — rola symulowana, tylko do wizualizacji składu. */
+/** Pozostała rola (QA, BA, Dev…) — tylko do wizualizacji składu. */
 export interface Mercenary {
   id: string
   projectId: string
@@ -99,9 +101,9 @@ export interface Settings {
 }
 
 export const CLASS_META: Record<DesignerClass, { label: string; short: string; color: string; hero: string; rarity: string }> = {
-  SENIOR_PD: { label: 'Senior Product Designer', short: 'Senior PD', color: '#f2b53c', hero: 'Paladyn', rarity: 'Legendarna' },
-  UX_RESEARCHER: { label: 'UX Researcher', short: 'UX Researcher', color: '#a77bff', hero: 'Wyrocznia', rarity: 'Legendarna' },
-  MEDIOR_PD: { label: 'Medior Product Designer', short: 'Medior PD', color: '#4fa3ff', hero: 'Rycerz', rarity: 'Rzadka' },
+  SENIOR_PD: { label: 'Senior Product Designer', short: 'Senior PD', color: '#f2b53c', hero: 'Senior', rarity: 'Senior' },
+  UX_RESEARCHER: { label: 'UX Researcher', short: 'UX Researcher', color: '#a77bff', hero: 'Research', rarity: 'Research' },
+  MEDIOR_PD: { label: 'Medior Product Designer', short: 'Medior PD', color: '#4fa3ff', hero: 'Medior', rarity: 'Medior' },
 }
 
 export const MERC_META: Record<MercenaryRole, { label: string; color: string }> = {

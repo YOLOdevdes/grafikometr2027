@@ -13,7 +13,7 @@ const SPACING = 50
 const CLASS_ORDER: Record<DesignerClass, number> = { SENIOR_PD: 0, MEDIOR_PD: 1, UX_RESEARCHER: 2 }
 const GHOST_LOOK = { g: 'M', skin: 1, outfit: 1 } as const
 
-/** Quest jako podróż przez krainę: drużyna idzie gęsiego wspólną drogą i stoi tam, gdzie jest dziś. */
+/** Projekt jako pasek z tłem regionu: zespół idzie gęsiego wspólną drogą i stoi tam, gdzie jest dziś. */
 export function JourneyRow({ world, project: p, start, end, pos, onOpenDemand }: {
   world: FullWorld; project: Project; start: ISODate; end: ISODate; pos: (d: ISODate) => number; onOpenDemand: (d: Demand) => void
 }) {
@@ -26,7 +26,7 @@ export function JourneyRow({ world, project: p, start, end, pos, onOpenDemand }:
   const height = ROW_H
   const ROAD_Y = ROW_H - 24
 
-  // drużyna idzie gęsiego: kto jest w tym samym miejscu na osi, ten w jednym szyku
+  // zespół idzie gęsiego: kto jest w tym samym miejscu na osi, ten w jednym szyku
   const members = slots
     .map(d => {
       const who = world.designers.find(x => x.id === d.designerId)
@@ -71,13 +71,13 @@ export function JourneyRow({ world, project: p, start, end, pos, onOpenDemand }:
       </div>
 
       <div className={`tl-lane journey ${p.from <= today && today <= p.to ? 'moving' : ''}`} style={biomeStyle(p.region)}>
-        {/* mgła poza czasem trwania questu */}
+        {/* przyciemnienie poza czasem trwania projektu */}
         <div className="fog" style={{ left: 0, width: `${pFrom}%` }} />
         <div className="fog" style={{ left: `${pTo}%`, right: 0 }} />
         {p.from >= start && p.from <= last && <div className="landmark" style={{ left: `${pFrom}%` }} title={`Start ${fmtRange(p.from, p.to)}`}>⚑</div>}
         {p.to >= start && p.to <= last && <div className="landmark end" style={{ left: `${pTo}%` }} title={`Meta ${fmtRange(p.from, p.to)}`}>♜</div>}
 
-        {slots.length === 0 && <div className="journey-empty">brak zapotrzebowania — dodaj sloty w Questach</div>}
+        {slots.length === 0 && <div className="journey-empty">brak slotów — dodaj je w zakładce Projekty</div>}
         <div className="road" style={{ left: `${pFrom}%`, width: `${pTo - pFrom}%`, top: ROAD_Y }} />
 
         {parties.map(party =>

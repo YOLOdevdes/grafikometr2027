@@ -18,12 +18,12 @@ export function PartyScreen({ world, onOpenHero }: { world: FullWorld; onOpenHer
   return (
     <div>
       <div className="tl-toolbar">
-        <h2 style={{ fontSize: 14 }}>DRUŻYNA</h2>
+        <h2 style={{ fontSize: 14 }}>ZESPÓŁ</h2>
         <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13 }}>
           <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} /> pokaż zarchiwizowanych
         </label>
         <span className="spacer" />
-        <button className="primary" onClick={() => setAdding(true)}>+ Nowy bohater</button>
+        <button className="primary" onClick={() => setAdding(true)}>+ Dodaj osobę</button>
       </div>
 
       {CLASSES.map(cls => {
@@ -32,7 +32,7 @@ export function PartyScreen({ world, onOpenHero }: { world: FullWorld; onOpenHer
         const meta = CLASS_META[cls]
         return (
           <div key={cls} className="quest-group">
-            <h3 style={{ color: meta.color }}>{meta.label.toUpperCase()} · {meta.hero} · {heroes.length}</h3>
+            <h3 style={{ color: meta.color }}>{meta.label.toUpperCase()} · {heroes.length}</h3>
             <div className="party">
               {heroes.map(h => {
                 const st = designerState(world, h)
@@ -40,7 +40,7 @@ export function PartyScreen({ world, onOpenHero }: { world: FullWorld; onOpenHer
                   <div key={h.id} className={`win mini-card ${h.archivedAt ? 'archived' : ''}`} onClick={() => onOpenHero(h)} style={{ borderColor: meta.color }}>
                     <div className="stage"><Sprite cls={h.cls} look={lookOf(h)} state={st} scale={3} /></div>
                     <b>{h.name}</b>
-                    <div><small>{h.title ?? meta.hero}</small></div>
+                    <div><small>{h.title ?? meta.label}</small></div>
                     <div style={{ fontSize: 12, marginTop: 6 }} className={st === 'tired' ? 'no' : st === 'idle' ? 'ok' : st === 'sleep' ? 'dim' : 'wait'}>
                       {STATE_LABEL[st]} · {fmtFte(loadOn(world, h.id, today))}/{fmtFte(h.baseFte)}
                     </div>

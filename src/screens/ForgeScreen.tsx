@@ -90,7 +90,7 @@ export function ForgeScreen({ world }: { world: FullWorld }) {
   return (
     <div>
       <div className="tl-toolbar">
-        <h2 style={{ fontSize: 14 }}>KUŹNIA REKRUTACJI</h2>
+        <h2 style={{ fontSize: 14 }}>PROGNOZA REKRUTACJI</h2>
         <span className="spacer" />
         <span className="dim">horyzont</span>
         {[12, 26, 52].map(w => (
@@ -104,8 +104,8 @@ export function ForgeScreen({ world }: { world: FullWorld }) {
       </div>
 
       <div className="win" style={{ marginBottom: 22 }}>
-        <div className="win-title">WYROCZNIA MÓWI</div>
-        {alerts.length === 0 && <div className="ok">✓ Podaż pokrywa popyt w całym horyzoncie. Spokojny sen dla head of design.</div>}
+        <div className="win-title">ALERTY REKRUTACYJNE</div>
+        {alerts.length === 0 && <div className="ok">✓ Podaż pokrywa popyt w całym horyzoncie. Brak potrzeby rekrutacji.</div>}
         {CLASSES.flatMap(cls => {
           const certain = alerts.find(a => a.cls === cls && a.scope === 'CERTAIN')
           const all = alerts.find(a => a.cls === cls && a.scope === 'ALL')
@@ -126,7 +126,7 @@ export function ForgeScreen({ world }: { world: FullWorld }) {
           ]
         })}
         <p className="hint" style={{ textAlign: 'left', marginBottom: 0 }}>
-          Podaż = suma dostępności osób danej klasy minus nieobecności. Popyt = suma zleceń tej klasy (obsadzonych i pustych). Alert, gdy popyt przewyższa podaż przez ≥ {world.settings.alertWeeks} tyg. z rzędu.
+          Podaż = suma dostępności osób w danej roli minus nieobecności. Popyt = suma slotów tej roli (obsadzonych i wolnych). Alert, gdy popyt przewyższa podaż przez ≥ {world.settings.alertWeeks} tyg. z rzędu.
         </p>
       </div>
 

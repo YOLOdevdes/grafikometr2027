@@ -31,6 +31,18 @@ export class PipolatorDB extends Dexie {
         else if (p.region === 'USA') p.region = 'NORTH_AMERICA'
       }),
     )
+    // v3: nazewnictwo projektowe zamiast fantasy — podmiana pseudonimów z danych demo
+    this.version(3).upgrade(tx =>
+      tx.table('designers').toCollection().modify((d: { title?: string }) => {
+        const map: Record<string, string> = {
+          'Pikselowa Paladynka': 'Design systemy', 'Strażnik Siatki': 'Fintech i bankowość', 'Kowal Komponentów': 'Biblioteki komponentów',
+          'Rycerka Wireframe': 'Aplikacje mobilne', 'Giermek Flow': 'User flows i prototypy', 'Łuczniczka Kerningu': 'UI i typografia',
+          'Tropiciel Pikseli': 'Dashboardy i dane', 'Wyrocznia Wywiadów': 'Wywiady i testy', 'Szaman Persony': 'Research ilościowy',
+          'Mistrzyni Mapy Empatii': 'Service design',
+        }
+        if (d.title && map[d.title]) d.title = map[d.title]
+      }),
+    )
   }
 }
 
@@ -158,7 +170,7 @@ export async function exportJSON(): Promise<string> {
 
 export async function importJSON(json: string) {
   const parsed = JSON.parse(json)
-  if (parsed?.app !== 'pipolator' || !parsed.data) throw new Error('To nie jest plik Pipolatora')
+  if (parsed?.app !== 'pipolator' || !parsed.data) throw new Error('To nie jest plik zapisu Grafikometru2027')
   await db.transaction('rw', TABLES.map(t => db.table(t)), async () => {
     for (const t of TABLES) {
       await db.table(t).clear()

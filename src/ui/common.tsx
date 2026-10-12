@@ -41,8 +41,8 @@ export function designerState(world: World, d: Designer, day = todayISO()): Spri
 }
 
 export const STATE_LABEL: Record<SpriteState, string> = {
-  idle: 'Wolny — czeka na quest',
-  work: 'W akcji',
-  tired: 'Przeciążony!',
-  sleep: 'Odpoczywa',
+  idle: 'Dostępny',
+  work: 'W projekcie',
+  tired: 'Przeciążony',
+  sleep: 'Nieobecny',
 }

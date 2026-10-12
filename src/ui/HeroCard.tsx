@@ -46,7 +46,7 @@ export function HeroCard({ world, designer, onClose }: { world: FullWorld; desig
           <div className="hero-face">
             <div className="hc-top">
               <div className="hc-icon">{ICON[designer.cls]}</div>
-              <span>Pipolator</span>
+              <span>Grafikometr2027</span>
               <span className="line" />
               <span>№{String(index).padStart(3, '0')}</span>
             </div>
@@ -58,7 +58,7 @@ export function HeroCard({ world, designer, onClose }: { world: FullWorld; desig
               ) : (
                 <div className="placeholder"><Sprite cls={designer.cls} look={lookOf(designer)} state={state} scale={7} /></div>
               )}
-              {meta.rarity === 'Legendarna' && <div className="holo" />}
+              {designer.cls !== 'MEDIOR_PD' && <div className="holo" />}
               <div className="hc-rarity">{meta.rarity.toUpperCase()}</div>
             </div>
             <div className="hc-now">
@@ -73,16 +73,16 @@ export function HeroCard({ world, designer, onClose }: { world: FullWorld; desig
             </div>
             <div className="hc-stats">
               <div className="hc-stat" title="Aktywne projekty"><span>⚔</span>{active.length}</div>
-              <div className="hc-stat" title="Projekty w kronice"><span>📜</span>{chronicle.length}</div>
+              <div className="hc-stat" title="Projekty w historii"><span>📜</span>{chronicle.length}</div>
               <div className="hc-stat" title={nextFree ? `Wolny (≥0.5) od ${fmt(nextFree)}` : 'Brak wolnego terminu w ciągu roku'}><span>⏳</span>{weeksToFree}</div>
               <Heart value={fmtFte(Math.round(freeWeek * 10) / 10)} />
             </div>
           </div>
 
           <div className="hero-face back">
-            <div className="hc-back-h">KRONIKA</div>
+            <div className="hc-back-h">HISTORIA PROJEKTÓW</div>
             <div className="chron">
-              {chronicle.length === 0 && <small>Jeszcze żadnych questów.</small>}
+              {chronicle.length === 0 && <small>Brak projektów w historii.</small>}
               {chronicle.map(e => (
                 <div key={e.demandId + e.from} className="chron-item" style={{ opacity: isPast(e) ? 0.65 : 1 }}>
                   <b>{e.projectName}</b> · {PHASE_LABEL[e.phase]} {e.to >= today && e.from <= today && '· teraz'}
@@ -90,7 +90,7 @@ export function HeroCard({ world, designer, onClose }: { world: FullWorld; desig
                 </div>
               ))}
             </div>
-            <div className="hc-back-h" style={{ fontSize: 18 }}>ODPOCZYNEK</div>
+            <div className="hc-back-h" style={{ fontSize: 18 }}>NIEOBECNOŚCI</div>
             <div style={{ fontSize: 13, minHeight: 40 }}>
               {absences.length === 0 && <small>Brak zaplanowanych nieobecności.</small>}
               {absences.slice(0, 4).map(a => <div key={a.id}>🏝 {ABSENCE_LABEL[a.type]} {fmtRange(a.from, a.to)}</div>)}
@@ -137,18 +137,18 @@ export function DesignerForm({ designer, onClose }: { designer?: Designer; onClo
     onClose()
   }
   return (
-    <Modal onClose={onClose} title={designer ? 'EDYTUJ BOHATERA' : 'NOWY BOHATER'}>
+    <Modal onClose={onClose} title={designer ? 'EDYTUJ OSOBĘ' : 'NOWA OSOBA'}>
       <div className="form-grid">
         <label className="field">
           Imię
           <input autoFocus value={d.name ?? ''} onChange={e => setD({ ...d, name: e.target.value })} />
         </label>
         <label className="field">
-          Pseudonim na karcie
-          <input value={d.title ?? ''} placeholder="np. Pikselowa Paladynka" onChange={e => setD({ ...d, title: e.target.value || undefined })} />
+          Specjalizacja
+          <input value={d.title ?? ''} placeholder="np. Design systemy, Research ilościowy" onChange={e => setD({ ...d, title: e.target.value || undefined })} />
         </label>
         <label className="field">
-          Klasa
+          Rola
           <select value={d.cls} onChange={e => setD({ ...d, cls: e.target.value as DesignerClass })}>
             {CLASSES.map(c => <option key={c} value={c}>{CLASS_META[c].label}</option>)}
           </select>
@@ -209,7 +209,7 @@ export function DesignerForm({ designer, onClose }: { designer?: Designer; onClo
       <div className="row-actions">
         {designer && (
           <button className="danger" onClick={async () => { await actions.archiveDesigner(designer.id, !designer.archivedAt); onClose() }}>
-            {designer.archivedAt ? 'Przywróć do drużyny' : 'Archiwizuj'}
+            {designer.archivedAt ? 'Przywróć do zespołu' : 'Archiwizuj'}
           </button>
         )}
         <span style={{ flex: 1 }} />

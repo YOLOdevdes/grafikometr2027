@@ -11,16 +11,16 @@ export async function seedDemo() {
   const mk = (name: string, title: string, cls: DesignerClass, illustration?: string): Designer => ({
     id: uid(), name, title, cls, baseFte: 1, createdAt: created, illustration,
   })
-  const kasia = mk('Kasia W.', 'Pikselowa Paladynka', 'SENIOR_PD', '/art/senior-pd-placeholder.png')
-  const marek = mk('Marek P.', 'Strażnik Siatki', 'SENIOR_PD')
-  const tomek = mk('Tomek R.', 'Kowal Komponentów', 'SENIOR_PD')
-  const ola = mk('Ola S.', 'Rycerka Wireframe', 'MEDIOR_PD')
-  const bartek = mk('Bartek L.', 'Giermek Flow', 'MEDIOR_PD')
-  const ania = mk('Ania K.', 'Łuczniczka Kerningu', 'MEDIOR_PD')
-  const piotr = mk('Piotr N.', 'Tropiciel Pikseli', 'MEDIOR_PD')
-  const ewa = mk('Ewa M.', 'Wyrocznia Wywiadów', 'UX_RESEARCHER')
-  const jan = mk('Jan Z.', 'Szaman Persony', 'UX_RESEARCHER')
-  const zosia = mk('Zosia B.', 'Mistrzyni Mapy Empatii', 'SENIOR_PD')
+  const kasia = mk('Kasia W.', 'Design systemy', 'SENIOR_PD', '/art/senior-pd-placeholder.png')
+  const marek = mk('Marek P.', 'Fintech i bankowość', 'SENIOR_PD')
+  const tomek = mk('Tomek R.', 'Biblioteki komponentów', 'SENIOR_PD')
+  const ola = mk('Ola S.', 'Aplikacje mobilne', 'MEDIOR_PD')
+  const bartek = mk('Bartek L.', 'User flows i prototypy', 'MEDIOR_PD')
+  const ania = mk('Ania K.', 'UI i typografia', 'MEDIOR_PD')
+  const piotr = mk('Piotr N.', 'Dashboardy i dane', 'MEDIOR_PD')
+  const ewa = mk('Ewa M.', 'Wywiady i testy', 'UX_RESEARCHER')
+  const jan = mk('Jan Z.', 'Research ilościowy', 'UX_RESEARCHER')
+  const zosia = mk('Zosia B.', 'Service design', 'SENIOR_PD')
   const designers = [kasia, marek, tomek, ola, bartek, ania, piotr, ewa, jan, zosia]
 
   const pj = (name: string, client: string, phase: Project['phase'], from: string, to: string, color: string, upcoming = false, region: Project['region'] = 'EUROPE'): Project => ({

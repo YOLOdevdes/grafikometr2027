@@ -93,3 +93,15 @@ describe('forecast', () => {
     expect(f.SENIOR_PD[0]).toMatchObject({ demandCertain: 0, demandAll: 1 })
   })
 })
+
+import { regionForCountry } from './countries'
+
+describe('regionForCountry', () => {
+  it('rozpoznaje kraje po polsku i angielsku, bez ogonków i wielkości liter', () => {
+    expect(regionForCountry('Arabia Saudyjska')).toBe('MIDDLE_EAST')
+    expect(regionForCountry('  usa ')).toBe('NORTH_AMERICA')
+    expect(regionForCountry('Wlochy')).toBe('EUROPE')
+    expect(regionForCountry('Łotwa')).toBe('EUROPE')
+    expect(regionForCountry('Atlantyda')).toBeUndefined()
+  })
+})
