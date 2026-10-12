@@ -4,7 +4,7 @@
 - **Edycja**: `https://<projekt>.vercel.app` → ekran tytułowy → LOGIN (hasło z `ADMIN_PASSWORD`).
   Sesja trwa godzinę od ostatniej aktywności; po 60 min bezczynności aplikacja sama wylogowuje.
 - **Podgląd**: `https://<projekt>.vercel.app/podglad` (albo „PODGLĄD” na ekranie startowym) — publiczny,
-  bez logowania, tylko odczyt, odświeża się co 30 s. Nieobecności bez typu (L4 itp. → „Nieobecność”),
+  bez logowania, tylko odczyt, odświeża się co 30 s. Nieobecności bez typu (L4 itp. → „Nieobecność”), projekty jako „Projekt A, B…” (bez klienta i notatek),
   notatnik bez edycji. Stare linki `/p/<kod>` też otwierają podgląd.
 - **Dane**: jeden dokument JSON w Upstash Redis (`api/state.ts`). Przeglądarka trzyma tylko kopię roboczą
   i wysyła zmiany ~1 s po edycji (kropka przy numerze wersji: zielona = zapisano).

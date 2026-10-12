@@ -14,13 +14,42 @@ async function load(): Promise<Doc> {
   return raw ? (JSON.parse(raw) as Doc) : { rev: 0, savedAt: null, data: null }
 }
 
-/** Podgląd publiczny: bez typu i notatek nieobecności (L4 to dane o zdrowiu). */
+interface Project { id: string; name: string; createdAt?: string; client?: string; notes?: string; country?: string; owner?: string }
+interface HistoryEvent { snapshot: { projectId: string; projectName: string; client?: string } }
+
+/** Kolejne litery: A…Z, AA, AB… */
+function letters(n: number): string {
+  let out = ''
+  for (n += 1; n > 0; n = Math.floor((n - 1) / 26)) out = String.fromCharCode(65 + ((n - 1) % 26)) + out
+  return out
+}
+
+/**
+ * Podgląd publiczny:
+ * - nieobecności bez typu i notatek (L4 to dane o zdrowiu),
+ * - projekty pod pseudonimem „Projekt A, B…” (ta sama nazwa = ta sama litera, kolejność wg utworzenia),
+ *   bez klienta, kraju i notatek — także w historii na kartach osób.
+ */
 function forPreview(data: Data | null): Data | null {
   if (!data) return null
   const absences = (data.absences as { id: string; designerId: string; from: string; to: string }[]).map(a => ({
     id: a.id, designerId: a.designerId, from: a.from, to: a.to, type: 'OTHER',
   }))
-  return { ...data, absences }
+
+  const projects = [...(data.projects as Project[])].sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? '') || a.id.localeCompare(b.id))
+  const aliasByName = new Map<string, string>()
+  const aliasById = new Map<string, string>()
+  for (const p of projects) {
+    const key = p.name.trim().toLowerCase()
+    if (!aliasByName.has(key)) aliasByName.set(key, `Projekt ${letters(aliasByName.size)}`)
+    aliasById.set(p.id, aliasByName.get(key)!)
+  }
+  const anonProjects = (data.projects as Project[]).map(({ client: _c, notes: _n, country: _k, ...p }) => ({ ...p, name: aliasById.get(p.id)! }))
+  const history = (data.history as HistoryEvent[]).map(h => {
+    const { client: _c, ...snapshot } = h.snapshot
+    return { ...h, snapshot: { ...snapshot, projectName: aliasById.get(snapshot.projectId) ?? 'Projekt' } }
+  })
+  return { ...data, absences, projects: anonProjects, history }
 }
 
 /** GET (zalogowany) → pełne dane; GET ?view=preview (każdy) → dane do publicznego podglądu. */
