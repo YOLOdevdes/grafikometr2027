@@ -22,6 +22,7 @@ export async function seedDemo() {
   const jan = mk('Jan Z.', 'Research ilościowy', 'UX_RESEARCHER')
   const zosia = mk('Zosia B.', 'Service design', 'SENIOR_PD')
   const designers = [kasia, marek, tomek, ola, bartek, ania, piotr, ewa, jan, zosia]
+  for (const [d, g] of [[kasia, 'F'], [marek, 'M'], [tomek, 'M'], [ola, 'F'], [bartek, 'M'], [ania, 'F'], [piotr, 'M'], [ewa, 'F'], [jan, 'M'], [zosia, 'F']] as const) d.gender = g
 
   const pj = (name: string, client: string, phase: Project['phase'], from: string, to: string, color: string, upcoming = false, region: Project['region'] = 'EUROPE'): Project => ({
     id: uid(), name, client, phase, from, to, color, upcoming, region, createdAt: created,

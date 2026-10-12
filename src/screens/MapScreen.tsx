@@ -1,17 +1,23 @@
 import { addMonths, format, startOfMonth } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import { useMemo, useState } from 'react'
-import type { FullWorld } from '../db'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db, type FullWorld } from '../db'
 import { demandLoad, overloadRanges } from '../domain/availability'
 import { addDaysISO, daysBetween, fmtRange, fromISO, maxISO, mondayOf, overlaps, toISO, todayISO } from '../domain/dates'
-import type { Demand, Designer, ISODate } from '../domain/types'
+import type { Demand, Designer, ISODate, Project } from '../domain/types'
 import { ABSENCE_LABEL, CLASS_META, PHASE_LABEL } from '../domain/types'
 import { designerState, fmtFte } from '../ui/common'
 import { lookOf } from '../ui/spriteSheets'
 import { Sprite } from '../ui/Sprite'
+import { DesignerForm } from '../ui/HeroCard'
+import { AbsenceIcon } from '../ui/AbsenceIcon'
+import { QuestWizard } from '../ui/QuestWizard'
+import { NotebookButton, TodoNotebook } from '../ui/TodoNotebook'
 import { JourneyRow } from './JourneyRow'
+import { READ_ONLY } from '../mode'
 
-export type Zoom = 'D' | 'T' | 'M' | 'R'
+export type Zoom = 'T' | 'M' | 'R'
 type View = 'quests' | 'heroes'
 
 const VIEW_KEY = 'pipolator.mapView'
@@ -22,19 +28,14 @@ const readView = (): View => {
     return 'quests'
   }
 }
-const SPAN: Record<Zoom, number> = { D: 21, T: 84, M: 182, R: 364 }
-const ZOOM_LABEL: Record<Zoom, string> = { D: 'Dzień', T: 'Tydzień', M: 'Miesiąc', R: 'Rok' }
+const SPAN: Record<Zoom, number> = { T: 84, M: 182, R: 364 }
+const ZOOM_LABEL: Record<Zoom, string> = { T: 'Tydzień', M: 'Miesiąc', R: 'Rok' }
 
-interface Col { from: ISODate; label: string; weekend?: boolean }
+interface Col { from: ISODate; label: string }
 
 function columns(zoom: Zoom, start: ISODate, end: ISODate): Col[] {
   const cols: Col[] = []
-  if (zoom === 'D') {
-    for (let d = start; d < end; d = addDaysISO(d, 1)) {
-      const dt = fromISO(d)
-      cols.push({ from: d, label: format(dt, 'EEEEEE dd', { locale: pl }), weekend: dt.getDay() % 6 === 0 })
-    }
-  } else if (zoom === 'T') {
+  if (zoom === 'T') {
     for (let d = mondayOf(start); d < end; d = addDaysISO(d, 7)) cols.push({ from: maxISO(d, start), label: format(fromISO(d), 'dd.MM') })
   } else {
     for (let m = startOfMonth(fromISO(start)); toISO(m) < end; m = addMonths(m, 1)) {
@@ -66,6 +67,15 @@ interface Props {
 export function MapScreen({ world, onOpenDemand, onOpenHero }: Props) {
   const today = todayISO()
   const [zoom, setZoom] = useState<Zoom>('T')
+  const [wizard, setWizard] = useState(false)
+  const [addingPerson, setAddingPerson] = useState(false)
+  const [editingProject, setEditingProject] = useState<Project | null>(null)
+  const [notebookFor, setNotebookFor] = useState<Designer | null>(null)
+  const openTodos = useLiveQuery(async () => {
+    const m = new Map<string, number>()
+    for (const t of await db.todos.toArray()) if (!t.done) m.set(t.designerId, (m.get(t.designerId) ?? 0) + 1)
+    return m
+  }, [])
   const [view, setViewState] = useState<View>(readView)
   const setView = (v: View) => {
     setViewState(v)
@@ -99,13 +109,19 @@ export function MapScreen({ world, onOpenDemand, onOpenHero }: Props) {
           </div>
           <span className="dim">{fmtRange(start, addDaysISO(end, -1))}</span>
           <span className="spacer" />
+          {READ_ONLY ? null : view === 'quests' ? (
+            <button className="primary sm" onClick={() => setWizard(true)}>+ Nowy projekt</button>
+          ) : (
+            <button className="primary sm" onClick={() => setAddingPerson(true)}>+ Dodaj osobę</button>
+          )}
+          <span style={{ width: 12 }} />
           <button className="sm" onClick={() => shift(-1)} aria-label="Wcześniej">◀</button>
-          <button className="sm" onClick={() => setStart(addDaysISO(mondayOf(today), zoom === 'D' ? -2 : -21))}>Dziś</button>
+          <button className="sm" onClick={() => setStart(addDaysISO(mondayOf(today), -21))}>Dziś</button>
           <button className="sm" onClick={() => shift(1)} aria-label="Później">▶</button>
           <span style={{ width: 12 }} />
           {(Object.keys(SPAN) as Zoom[]).map(z => (
-            <button key={z} className={`sm ${zoom === z ? 'on' : ''}`} title={ZOOM_LABEL[z]} onClick={() => setZoom(z)}>
-              {z}
+            <button key={z} className={`sm ${zoom === z ? 'on' : ''}`} aria-pressed={zoom === z} onClick={() => setZoom(z)}>
+              {ZOOM_LABEL[z]}
             </button>
           ))}
         </div>
@@ -117,7 +133,7 @@ export function MapScreen({ world, onOpenDemand, onOpenHero }: Props) {
             </div>
             <div className="tl-cols">
               {cols.map(c => (
-                <div key={c.from} className={`tl-col ${c.weekend ? 'weekend' : ''}`} style={{ left: `${pos(c.from)}%` }}>
+                <div key={c.from} className="tl-col" style={{ left: `${pos(c.from)}%` }}>
                   {c.label}
                 </div>
               ))}
@@ -127,13 +143,13 @@ export function MapScreen({ world, onOpenDemand, onOpenHero }: Props) {
           {view === 'quests' &&
             quests.map((p, i) => (
               <div key={p.id} className={i > 0 && (quests[i - 1].client ?? quests[i - 1].name) !== (p.client ?? p.name) ? 'client-start' : ''}>
-                <JourneyRow world={world} project={p} start={start} end={end} pos={pos} onOpenDemand={onOpenDemand} />
+                <JourneyRow world={world} project={p} start={start} end={end} pos={pos} onOpenDemand={onOpenDemand} onOpenHero={onOpenHero} onEditProject={() => setEditingProject(p)} />
               </div>
             ))}
           {view === 'quests' && quests.length === 0 && <p className="dim" style={{ padding: 16 }}>Brak projektów w tym okresie.</p>}
 
           {view === 'heroes' && heroes.map(h => (
-            <HeroRow key={h.id} world={world} hero={h} start={start} end={end} pos={pos} cols={cols} zoom={zoom} onOpenDemand={onOpenDemand} onOpenHero={onOpenHero} />
+            <HeroRow key={h.id} world={world} hero={h} start={start} end={end} pos={pos} cols={cols} onOpenDemand={onOpenDemand} onOpenHero={onOpenHero} openTodos={openTodos?.get(h.id) ?? 0} onOpenNotebook={() => setNotebookFor(h)} />
           ))}
 
           {today >= start && today < end && (
@@ -154,13 +170,17 @@ export function MapScreen({ world, onOpenDemand, onOpenHero }: Props) {
           )}
         </div>
       </section>
+      {wizard && <QuestWizard world={world} onClose={() => setWizard(false)} />}
+      {addingPerson && <DesignerForm onClose={() => setAddingPerson(false)} />}
+      {notebookFor && <TodoNotebook designer={notebookFor} onClose={() => setNotebookFor(null)} />}
+      {editingProject && <QuestWizard world={world} editing={editingProject} onClose={() => setEditingProject(null)} />}
     </div>
   )
 }
 
-function HeroRow({ world, hero, start, end, pos, cols, zoom, onOpenDemand, onOpenHero }: {
-  world: FullWorld; hero: Designer; start: ISODate; end: ISODate; pos: (d: ISODate) => number; cols: Col[]; zoom: Zoom
-  onOpenDemand: (d: Demand) => void; onOpenHero: (d: Designer) => void
+function HeroRow({ world, hero, start, end, pos, cols, onOpenDemand, onOpenHero, openTodos, onOpenNotebook }: {
+  world: FullWorld; hero: Designer; start: ISODate; end: ISODate; pos: (d: ISODate) => number; cols: Col[]
+  onOpenDemand: (d: Demand) => void; onOpenHero: (d: Designer) => void; openTodos: number; onOpenNotebook: () => void
 }) {
   const last = addDaysISO(end, -1)
   const bars = packLanes(world.demands.filter(d => d.designerId === hero.id && overlaps(d.from, d.to, start, last)))
@@ -172,18 +192,16 @@ function HeroRow({ world, hero, start, end, pos, cols, zoom, onOpenDemand, onOpe
 
   return (
     <div className="tl-row" style={{ height }}>
-      <div className="tl-who" onClick={() => onOpenHero(hero)} title="Otwórz kartę osoby">
+      <div className="tl-who" onClick={() => onOpenHero(hero)}>
         <Sprite cls={hero.cls} look={lookOf(hero)} state={designerState(world, hero)} scale={2} badge={false} />
         <div className="nm">
           <b>{hero.name}</b>
           <small style={{ color: meta.color }}>{meta.short}{hero.baseFte < 1 ? ` · ${fmtFte(hero.baseFte)}` : ''}</small>
         </div>
+        <NotebookButton designer={hero} open={openTodos} onOpen={onOpenNotebook} />
       </div>
       <div className="tl-lane">
         <div className="tl-grid">
-          {zoom === 'D' && cols.filter(c => c.weekend).map(c => (
-            <div key={c.from} className="tl-col weekend" style={{ left: `${pos(c.from)}%`, width: `${100 / cols.length}%`, border: 0 }} />
-          ))}
           {cols.map(c => <div key={c.from} className="tl-col" style={{ left: `${pos(c.from)}%`, padding: 0 }} />)}
         </div>
         {over.map(o => (
@@ -214,7 +232,8 @@ function HeroRow({ world, hero, start, end, pos, cols, zoom, onOpenDemand, onOpe
         })}
         {leaves.map(a => (
           <div key={a.id} className="tl-leave" style={{ left: `${pos(a.from)}%`, width: `${pos(addDaysISO(a.to, 1)) - pos(a.from)}%` }} title={`${ABSENCE_LABEL[a.type]} ${fmtRange(a.from, a.to)}`}>
-            {ABSENCE_LABEL[a.type]}
+            <AbsenceIcon type={a.type} size={1} />
+            <span>{ABSENCE_LABEL[a.type]}</span>
           </div>
         ))}
       </div>

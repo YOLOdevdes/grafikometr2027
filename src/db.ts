@@ -1,8 +1,9 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { World } from './domain/availability'
+import { READ_ONLY } from './mode'
 import { todayISO } from './domain/dates'
-import type { Absence, Demand, DemandSnapshot, Designer, HistoryEvent, HistoryType, Mercenary, Project, Settings } from './domain/types'
+import type { Absence, Demand, DemandSnapshot, Designer, HistoryEvent, HistoryType, Mercenary, Project, Settings, Todo } from './domain/types'
 
 export class PipolatorDB extends Dexie {
   designers!: EntityTable<Designer, 'id'>
@@ -12,9 +13,10 @@ export class PipolatorDB extends Dexie {
   mercenaries!: EntityTable<Mercenary, 'id'>
   history!: EntityTable<HistoryEvent, 'id'>
   settings!: EntityTable<Settings, 'id'>
+  todos!: EntityTable<Todo, 'id'>
 
   constructor() {
-    super('pipolator')
+    super(READ_ONLY ? 'pipolator-preview' : 'pipolator') // podgląd nie miesza się z danymi edycji
     this.version(1).stores({
       designers: 'id, cls',
       absences: 'id, designerId, from',
@@ -43,6 +45,8 @@ export class PipolatorDB extends Dexie {
         if (d.title && map[d.title]) d.title = map[d.title]
       }),
     )
+    // v4: notatnik z zadaniami przy każdej osobie
+    this.version(4).stores({ todos: 'id, designerId, createdAt' })
   }
 }
 
@@ -152,31 +156,51 @@ export const actions = {
     }
   },
 
+  async addTodo(designerId: string, text: string) {
+    await db.todos.add({ id: uid(), designerId, text, done: false, createdAt: now() })
+  },
+  async updateTodo(id: string, patch: Partial<Pick<Todo, 'text' | 'done'>>) {
+    await db.todos.update(id, patch)
+  },
+  async deleteTodo(id: string) {
+    await db.todos.delete(id)
+  },
+
   async saveSettings(s: Partial<Settings>) {
     const cur = (await db.settings.get('settings')) ?? DEFAULT_SETTINGS
     await db.settings.put({ ...cur, ...s })
   },
 }
 
-// ---------- backup ----------
+// ---------- backup / synchronizacja ----------
 
-const TABLES = ['designers', 'absences', 'projects', 'demands', 'mercenaries', 'history', 'settings'] as const
+export const TABLES = ['designers', 'absences', 'projects', 'demands', 'mercenaries', 'history', 'settings', 'todos'] as const
+export type Snapshot = Record<(typeof TABLES)[number], unknown[]>
+
+export async function exportData(): Promise<Snapshot> {
+  const data = {} as Snapshot
+  for (const t of TABLES) data[t] = await db.table(t).toArray()
+  return data
+}
+
+/** Podmienia całą zawartość bazy (import backupu, dane z serwera). */
+export async function replaceAll(data: Partial<Snapshot>) {
+  await db.transaction('rw', TABLES.map(t => db.table(t)), async () => {
+    for (const t of TABLES) {
+      await db.table(t).clear()
+      await db.table(t).bulkPut(data[t] ?? [])
+    }
+  })
+}
 
 export async function exportJSON(): Promise<string> {
-  const data: Record<string, unknown[]> = {}
-  for (const t of TABLES) data[t] = await db.table(t).toArray()
-  return JSON.stringify({ app: 'pipolator', version: 1, exportedAt: now(), data }, null, 2)
+  return JSON.stringify({ app: 'pipolator', version: 1, exportedAt: now(), data: await exportData() }, null, 2)
 }
 
 export async function importJSON(json: string) {
   const parsed = JSON.parse(json)
   if (parsed?.app !== 'pipolator' || !parsed.data) throw new Error('To nie jest plik zapisu Grafikometru2027')
-  await db.transaction('rw', TABLES.map(t => db.table(t)), async () => {
-    for (const t of TABLES) {
-      await db.table(t).clear()
-      await db.table(t).bulkPut(parsed.data[t] ?? [])
-    }
-  })
+  await replaceAll(parsed.data)
 }
 
 export async function wipe() {

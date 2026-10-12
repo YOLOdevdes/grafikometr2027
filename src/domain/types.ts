@@ -1,9 +1,11 @@
+import { READ_ONLY } from '../mode'
+
 /** Daty dzienne jako ISO `yyyy-MM-dd`. Zakresy są włącznie po obu stronach. */
 export type ISODate = string
 
 export type DesignerClass = 'SENIOR_PD' | 'MEDIOR_PD' | 'UX_RESEARCHER'
 export type MercenaryRole = 'QA' | 'BA' | 'DEV' | 'APM' | 'APE'
-export type Phase = 'PRESALES' | 'DISCOVERY' | 'DELIVERY'
+export type Phase = 'PRESALES' | 'DISCOVERY' | 'DELIVERY' | 'OTHER'
 export type AbsenceType = 'VACATION' | 'SICK' | 'TRAINING' | 'OTHER'
 /** Kontynent klienta — wyznacza tło paska projektu na harmonogramie. */
 export type Region = 'EUROPE' | 'NORTH_AMERICA' | 'SOUTH_AMERICA' | 'MIDDLE_EAST' | 'AFRICA' | 'ASIA' | 'OCEANIA' | 'OTHER'
@@ -22,6 +24,7 @@ export interface Designer {
   cls: DesignerClass
   baseFte: number
   illustration?: string // data URL albo ścieżka w /public
+  gender?: 'F' | 'M' // z profilu; wyznacza ilustrację karty i płeć ludzika
   look?: Look
   createdAt: string
   archivedAt?: string
@@ -36,6 +39,10 @@ export interface Absence {
   note?: string
 }
 
+/** Kraina w tle paska projektu (paczka teł parallax). */
+export const LANDS = ['desert', 'forest', 'moon', 'skies'] as const
+export type LandId = (typeof LANDS)[number]
+
 export interface Project {
   id: string
   name: string
@@ -47,6 +54,7 @@ export interface Project {
   color: string
   region?: Region
   country?: string
+  land?: LandId
   owner?: string // opiekun projektu po stronie TSH (PM/APM)
   notes?: string
   createdAt: string
@@ -95,15 +103,24 @@ export interface HistoryEvent {
   snapshot: DemandSnapshot
 }
 
+/** Zadanie z notatnika osoby. */
+export interface Todo {
+  id: string
+  designerId: string
+  text: string
+  done: boolean
+  createdAt: string
+}
+
 export interface Settings {
   id: 'settings'
   alertWeeks: number
 }
 
 export const CLASS_META: Record<DesignerClass, { label: string; short: string; color: string; hero: string; rarity: string }> = {
-  SENIOR_PD: { label: 'Senior Product Designer', short: 'Senior PD', color: '#f2b53c', hero: 'Senior', rarity: 'Senior' },
+  SENIOR_PD: { label: 'Product Designer', short: 'Senior PD', color: '#f2b53c', hero: 'Senior', rarity: 'Senior' },
   UX_RESEARCHER: { label: 'UX Researcher', short: 'UX Researcher', color: '#a77bff', hero: 'Research', rarity: 'Research' },
-  MEDIOR_PD: { label: 'Medior Product Designer', short: 'Medior PD', color: '#4fa3ff', hero: 'Medior', rarity: 'Medior' },
+  MEDIOR_PD: { label: 'Product Designer', short: 'Medior PD', color: '#4fa3ff', hero: 'Medior', rarity: 'Medior' },
 }
 
 export const MERC_META: Record<MercenaryRole, { label: string; color: string }> = {
@@ -118,18 +135,19 @@ export const PHASE_LABEL: Record<Phase, string> = {
   PRESALES: 'Presales',
   DISCOVERY: 'Discovery',
   DELIVERY: 'Delivery',
+  OTHER: 'Inna',
 }
 
 export const ABSENCE_LABEL: Record<AbsenceType, string> = {
   VACATION: 'Urlop',
   SICK: 'L4',
   TRAINING: 'Szkolenie',
-  OTHER: 'Inne',
+  OTHER: READ_ONLY ? 'Nieobecność' : 'Inne', // w podglądzie serwer ukrywa typ — wszystko to „Nieobecność”
 }
 
 export const CLASSES: DesignerClass[] = ['SENIOR_PD', 'MEDIOR_PD', 'UX_RESEARCHER']
 export const MERC_ROLES: MercenaryRole[] = ['QA', 'BA', 'DEV', 'APM', 'APE']
-export const PHASES: Phase[] = ['PRESALES', 'DISCOVERY', 'DELIVERY']
+export const PHASES: Phase[] = ['PRESALES', 'DISCOVERY', 'DELIVERY', 'OTHER']
 
 export const REGION_META: Record<Region, { label: string; land: string; icon: string }> = {
   EUROPE: { label: 'Europa', land: 'Las', icon: '♣' },

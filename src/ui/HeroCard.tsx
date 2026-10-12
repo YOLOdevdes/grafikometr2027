@@ -1,23 +1,35 @@
-import { useState, type CSSProperties } from 'react'
-import { actions, type FullWorld } from '../db'
-import { freeOn, loadOn, nextFreeDay } from '../domain/availability'
+import { useEffect, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { actions, db, type FullWorld } from '../db'
+import { loadOn } from '../domain/availability'
 import { chronicleOf, isPast } from '../domain/chronicle'
-import { addDaysISO, daysBetween, fmt, fmtRange, mondayOf, todayISO, workdays } from '../domain/dates'
-import type { Designer, DesignerClass, Look } from '../domain/types'
-import { ABSENCE_LABEL, CLASSES, CLASS_META, PHASE_LABEL } from '../domain/types'
-import { Modal, STATE_LABEL, designerState, fmtFte } from './common'
+import { addDaysISO, fmt, fmtRange, todayISO } from '../domain/dates'
+import type { AbsenceType, Designer, DesignerClass, Look } from '../domain/types'
+import { ABSENCE_LABEL, CLASS_META, PHASE_LABEL } from '../domain/types'
+import { Modal, designerState, fmtFte } from './common'
+import { AbsenceIcon } from './AbsenceIcon'
+import { cardArtFor, useCardArt } from './cardArt'
 import { lookOf } from './spriteSheets'
 import { Sprite } from './Sprite'
+import { READ_ONLY } from '../mode'
 
-const ICON: Record<DesignerClass, string> = { SENIOR_PD: '♛', MEDIOR_PD: '⚔', UX_RESEARCHER: '◉' }
+const UNIT = 0.5 // jednostka planowania: pół etatu
 
-function Heart({ value }: { value: string }) {
+const AWAY_NOW: Record<AbsenceType, string> = { VACATION: 'Na urlopie', SICK: 'Na L4', TRAINING: 'Na szkoleniu', OTHER: 'Nieobecny' }
+
+/** Zajęte FTE w kostkach po 0.5: pełny etat = 2 kostki; nadgodziny jako czerwone kostki ponad etat. */
+function FteBlocks({ load, base }: { load: number; base: number }) {
+  const baseUnits = Math.max(1, Math.ceil(base / UNIT - 1e-6))
+  const used = Math.round(load / UNIT)
+  const cells = Math.max(baseUnits, used)
   return (
-    <div className="hc-heart" title="Wolne FTE w tym tygodniu">
-      <svg viewBox="0 0 58 52">
-        <path d="M29 49 C10 35 3 26 3 16 C3 8 9 3 16 3 C22 3 26 6 29 11 C32 6 36 3 42 3 C49 3 55 8 55 16 C55 26 48 35 29 49Z" fill="#ff4d6d" stroke="#111" strokeWidth="4" />
-      </svg>
-      <b>{value}</b>
+    <div className="pxc-fte" title={`Zajęte ${fmtFte(load)} z ${fmtFte(base)} FTE (kostka = 0.5 FTE)`}>
+      <span className="pxc-fte-cells" role="meter" aria-label="Zajęte FTE" aria-valuemin={0} aria-valuemax={base} aria-valuenow={load}>
+        {Array.from({ length: cells }, (_, i) => (
+          <i key={i} className={i >= baseUnits ? 'over' : i < used ? 'on' : ''} />
+        ))}
+      </span>
+      <b>{fmtFte(load)} / {fmtFte(base)} FTE</b>
     </div>
   )
 }
@@ -25,115 +37,198 @@ function Heart({ value }: { value: string }) {
 export function HeroCard({ world, designer, onClose }: { world: FullWorld; designer: Designer; onClose: () => void }) {
   const [flipped, setFlipped] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [leave, setLeave] = useState<{ from: string; to: string; type: AbsenceType } | null>(null)
+  const [leaveError, setLeaveError] = useState('')
   const meta = CLASS_META[designer.cls]
   const today = todayISO()
   const chronicle = chronicleOf(world, designer.id)
-  const active = world.demands.filter(d => d.designerId === designer.id && d.from <= today && today <= d.to)
-  const week = workdays(mondayOf(today), addDaysISO(mondayOf(today), 4))
-  const freeWeek = Math.max(0, week.reduce((s, day) => s + freeOn(world, designer, day), 0) / (week.length || 1))
-  const nextFree = nextFreeDay(world, designer, today, 0.5)
-  const weeksToFree = nextFree ? Math.ceil(daysBetween(today, nextFree) / 7) : '∞'
+  const projectOf = (id: string) => world.projects.find(p => p.id === id)
+  const current = world.demands.filter(d => d.designerId === designer.id && d.from <= today && today <= d.to)
+  const upcoming = current.length
+    ? []
+    : world.demands.filter(d => d.designerId === designer.id && d.from > today).sort((a, b) => a.from.localeCompare(b.from)).slice(0, 1)
+  const load = loadOn(world, designer.id, today)
   const absences = world.absences.filter(a => a.designerId === designer.id && a.to >= today).sort((a, b) => a.from.localeCompare(b.from))
-  const index = world.designers.findIndex(d => d.id === designer.id) + 1
+  const onLeave = absences.find(a => a.from <= today)
+  const soon = !onLeave ? absences.find(a => a.from <= addDaysISO(today, 30)) : undefined
   const state = designerState(world, designer)
+  // eksperyment z ilustracjami: własna wgrana grafika ma pierwszeństwo, potem ilustracja roli i płci
+  const cardArtOn = useCardArt()
+  const uploaded = designer.illustration?.startsWith('data:') ? designer.illustration : undefined
+  const art = cardArtOn ? uploaded ?? cardArtFor(designer) : designer.illustration
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !editing && (leave ? setLeave(null) : onClose())
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose, editing, leave])
+
+  const saveLeave = async () => {
+    if (!leave?.from || !leave.to) return setLeaveError('Wybierz daty urlopu.')
+    if (leave.from > leave.to) return setLeaveError('Koniec urlopu musi być taki sam jak początek albo późniejszy.')
+    await actions.saveAbsence({ designerId: designer.id, ...leave })
+    setLeave(null)
+    setLeaveError('')
+  }
 
   if (editing) return <DesignerForm designer={designer} onClose={() => setEditing(false)} />
+
+  const projectRow = (d: (typeof current)[number], prefix = '') => {
+    const p = projectOf(d.projectId)
+    return (
+      <div key={d.id} className="pxc-proj" style={{ borderLeftColor: p?.color }}>
+        <span>
+          <b>{prefix}{p?.name ?? '?'}</b>
+          <small>{p ? `${PHASE_LABEL[p.phase]} · ${fmtRange(p.from, p.to)}` : ''}</small>
+        </span>
+        <em>{fmtFte(d.fte + (d.overtimeFte ?? 0))} FTE</em>
+      </div>
+    )
+  }
 
   return (
     <div className="overlay" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="card-stage">
-        <div className={`hero-card ${flipped ? 'flipped' : ''}`} style={{ '--cc': meta.color } as CSSProperties} onClick={() => setFlipped(f => !f)}>
-          <div className="hero-face">
-            <div className="hc-top">
-              <div className="hc-icon">{ICON[designer.cls]}</div>
-              <span>Grafikometr2027</span>
-              <span className="line" />
-              <span>№{String(index).padStart(3, '0')}</span>
-            </div>
-            <div className="hc-title">{designer.name}</div>
-            <div className="hc-sub">{designer.title ? `${designer.title} · ` : ''}{meta.label}</div>
-            <div className="hc-art">
-              {designer.illustration ? (
-                <img src={designer.illustration} alt={`Ilustracja: ${designer.name}`} />
-              ) : (
-                <div className="placeholder"><Sprite cls={designer.cls} look={lookOf(designer)} state={state} scale={7} /></div>
-              )}
-              {designer.cls !== 'MEDIOR_PD' && <div className="holo" />}
-              <div className="hc-rarity">{meta.rarity.toUpperCase()}</div>
-            </div>
-            <div className="hc-now">
-              {active.length ? (
-                active.map(d => {
-                  const p = world.projects.find(p => p.id === d.projectId)
-                  return <div key={d.id}>⚔ {p?.name} · {p && PHASE_LABEL[p.phase]} · {fmtFte(d.fte + (d.overtimeFte ?? 0))} do {fmt(d.to)}</div>
-                })
-              ) : (
-                <div>☺ {STATE_LABEL[state]}</div>
-              )}
-            </div>
-            <div className="hc-stats">
-              <div className="hc-stat" title="Aktywne projekty"><span>⚔</span>{active.length}</div>
-              <div className="hc-stat" title="Projekty w historii"><span>📜</span>{chronicle.length}</div>
-              <div className="hc-stat" title={nextFree ? `Wolny (≥0.5) od ${fmt(nextFree)}` : 'Brak wolnego terminu w ciągu roku'}><span>⏳</span>{weeksToFree}</div>
-              <Heart value={fmtFte(Math.round(freeWeek * 10) / 10)} />
+        <div className={`pxcard role-${designer.cls} ${flipped ? 'flipped' : ''}`} onClick={() => setFlipped(f => !f)} role="group" aria-label={`Karta: ${designer.name}`}>
+          <div className="pxc-face">
+            <div className="pxc-inner">
+              <div className="pxc-top">
+                <span className="pxc-title">
+                  <span className="pxc-name">{designer.name}</span>
+                  {onLeave && <AbsenceIcon type={onLeave.type} size={2} title={`${ABSENCE_LABEL[onLeave.type]} do ${fmt(onLeave.to)}`} />}
+                </span>
+              </div>
+              <span className="pxc-role-chip">{meta.label}</span>
+              <div className={`pxc-art ${art ? 'with-art' : ''}`}>
+                <span className={`pxc-leave ${onLeave ? 'on' : soon ? 'soon' : ''}`}>
+                  {onLeave ? `${AWAY_NOW[onLeave.type]} · do ${fmt(onLeave.to)}` : soon ? `${ABSENCE_LABEL[soon.type]} od ${fmt(soon.from)}` : 'Nie na urlopie'}
+                </span>
+                {art ? (
+                  <img className="pxc-illu" src={art} alt={`Ilustracja: ${designer.name}`} />
+                ) : (
+                  <Sprite cls={designer.cls} look={lookOf(designer)} state={state} scale={5} badge={false} />
+                )}
+              </div>
+              <FteBlocks load={load} base={designer.baseFte} />
+              <div className="pxc-projects">
+                {current.map(d => projectRow(d))}
+                {upcoming.map(d => projectRow(d, 'Od ' + fmt(d.from) + ': '))}
+                {current.length === 0 && upcoming.length === 0 && <p className="pxc-empty">Brak projektu.</p>}
+              </div>
             </div>
           </div>
 
-          <div className="hero-face back">
-            <div className="hc-back-h">HISTORIA PROJEKTÓW</div>
-            <div className="chron">
-              {chronicle.length === 0 && <small>Brak projektów w historii.</small>}
-              {chronicle.map(e => (
-                <div key={e.demandId + e.from} className="chron-item" style={{ opacity: isPast(e) ? 0.65 : 1 }}>
-                  <b>{e.projectName}</b> · {PHASE_LABEL[e.phase]} {e.to >= today && e.from <= today && '· teraz'}
-                  <small>{fmtRange(e.from, e.to)} · {fmtFte(e.fte)} FTE{e.client ? ` · ${e.client}` : ''}</small>
-                </div>
-              ))}
+          <div className="pxc-face back">
+            <div className="pxc-inner">
+              <div className="pxc-top">
+                <span className="pxc-title">Historia</span>
+              </div>
+              <div className="pxc-list">
+                {chronicle.length === 0 && <p className="pxc-empty">Brak projektów w historii.</p>}
+                {chronicle.map(e => (
+                  <div key={e.demandId + e.from} className={`pxc-entry ${isPast(e) ? 'past' : ''}`}>
+                    <b>{e.projectName}</b>
+                    <small>{PHASE_LABEL[e.phase]} · {fmtRange(e.from, e.to)} · {fmtFte(e.fte)} FTE{e.to >= today && e.from <= today ? ' · teraz' : ''}</small>
+                  </div>
+                ))}
+              </div>
+              <div className="pxc-sub">Nieobecności</div>
+              <div className="pxc-list short">
+                {absences.length === 0 && <p className="pxc-empty">Brak zaplanowanych nieobecności.</p>}
+                {absences.map(a => (
+                  <div key={a.id} className={`pxc-entry ${READ_ONLY ? '' : 'with-action'}`}>
+                    <span><b>{ABSENCE_LABEL[a.type]}</b><small>{fmtRange(a.from, a.to)}</small></span>
+                    {!READ_ONLY && <button
+                      className="sm ghost"
+                      aria-label={`Usuń: ${ABSENCE_LABEL[a.type]} ${fmtRange(a.from, a.to)}`}
+                      title="Usuń nieobecność"
+                      onClick={async e => {
+                        e.stopPropagation() // nie odwracaj karty
+                        if (confirm(`Usunąć: ${ABSENCE_LABEL[a.type]} ${fmtRange(a.from, a.to)}?`)) await actions.deleteAbsence(a.id)
+                      }}
+                    >
+                      ✕
+                    </button>}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="hc-back-h" style={{ fontSize: 18 }}>NIEOBECNOŚCI</div>
-            <div style={{ fontSize: 13, minHeight: 40 }}>
-              {absences.length === 0 && <small>Brak zaplanowanych nieobecności.</small>}
-              {absences.slice(0, 4).map(a => <div key={a.id}>🏝 {ABSENCE_LABEL[a.type]} {fmtRange(a.from, a.to)}</div>)}
-            </div>
-            <div className="hc-now">Obciążenie dziś: {fmtFte(loadOn(world, designer.id, today))} / {fmtFte(designer.baseFte)} FTE</div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => setFlipped(f => !f)}>↻ Odwróć</button>
-          <button onClick={() => setEditing(true)}>✎ Edytuj</button>
-          <button onClick={onClose}>Zamknij</button>
-        </div>
-        <p className="hint">kliknij kartę, by ją odwrócić · Esc zamyka</p>
+
+        {leave ? (
+          <div className="win pxc-leave-form" role="group" aria-label="Dodaj urlop">
+            <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+              <label className="field">
+                Od
+                <input type="date" autoFocus value={leave.from} onChange={e => setLeave({ ...leave, from: e.target.value })} />
+              </label>
+              <label className="field">
+                Do
+                <input type="date" min={leave.from || undefined} value={leave.to} onChange={e => setLeave({ ...leave, to: e.target.value })} />
+              </label>
+              <label className="field">
+                Typ
+                <select value={leave.type} onChange={e => setLeave({ ...leave, type: e.target.value as AbsenceType })}>
+                  {(Object.keys(ABSENCE_LABEL) as AbsenceType[]).map(t => <option key={t} value={t}>{ABSENCE_LABEL[t]}</option>)}
+                </select>
+              </label>
+            </div>
+            {leaveError && <p className="no" role="alert" style={{ margin: '8px 0 0', fontSize: 13 }}>{leaveError}</p>}
+            <div className="row-actions" style={{ marginTop: 10 }}>
+              <button onClick={() => { setLeave(null); setLeaveError('') }}>Anuluj</button>
+              <button className="primary" onClick={saveLeave}>Zapisz urlop</button>
+            </div>
+          </div>
+        ) : READ_ONLY ? null : (
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button className="primary" onClick={() => setLeave({ from: '', to: '', type: 'VACATION' })}>Dodaj urlop</button>
+            <button onClick={() => setEditing(true)}>Edytuj</button>
+          </div>
+        )}
+        <p className="hint">kliknij kartę, by ją odwrócić · kliknij obok albo Esc, by zamknąć</p>
       </div>
     </div>
   )
 }
 
-async function resizeImage(file: File, max = 900): Promise<string> {
-  const url = URL.createObjectURL(file)
-  try {
-    const img = await new Promise<HTMLImageElement>((res, rej) => {
-      const i = new Image()
-      i.onload = () => res(i)
-      i.onerror = rej
-      i.src = url
-    })
-    const s = Math.min(1, max / Math.max(img.width, img.height))
-    const c = document.createElement('canvas')
-    c.width = Math.round(img.width * s)
-    c.height = Math.round(img.height * s)
-    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height)
-    return c.toDataURL('image/webp', 0.88)
-  } finally {
-    URL.revokeObjectURL(url)
+type Gender = NonNullable<Designer['gender']>
+
+/**
+ * Losuje skórę i strój tak, żeby zestaw (płeć + skóra + strój) się nie powtarzał.
+ * Gdy wszystkie 9 zestawów danej płci jest zajętych, wybiera spośród najrzadziej używanych.
+ */
+function pickLook(gender: Gender, others: Designer[], avoid?: Look): Look {
+  const count = new Map<string, number>()
+  for (const o of others) {
+    const l = lookOf(o)
+    if (l.g === gender) count.set(`${l.skin}${l.outfit}`, (count.get(`${l.skin}${l.outfit}`) ?? 0) + 1)
   }
+  const all: Look[] = []
+  for (const skin of [1, 2, 3] as const) for (const outfit of [1, 2, 3] as const) all.push({ g: gender, skin, outfit })
+  const min = Math.min(...all.map(l => count.get(`${l.skin}${l.outfit}`) ?? 0))
+  let pool = all.filter(l => (count.get(`${l.skin}${l.outfit}`) ?? 0) === min)
+  if (avoid && pool.length > 1) pool = pool.filter(l => l.skin !== avoid.skin || l.outfit !== avoid.outfit)
+  return pool[Math.floor(Math.random() * pool.length)]
 }
 
 export function DesignerForm({ designer, onClose }: { designer?: Designer; onClose: () => void }) {
-  const [d, setD] = useState<Partial<Designer>>(designer ?? { cls: 'MEDIOR_PD', baseFte: 1, name: '' })
+  const [d, setD] = useState<Partial<Designer>>(designer ?? { cls: 'SENIOR_PD', baseFte: 1, name: '' })
+  const everyone = useLiveQuery(() => db.designers.toArray(), []) ?? []
+  const others = everyone.filter(o => o.id !== designer?.id && !o.archivedAt)
+  // Medior nie jest już wybierany przy dodawaniu; zostaje tylko w edycji osoby, która go ma
+  const roles = (['SENIOR_PD', 'UX_RESEARCHER'] as DesignerClass[]).concat(designer?.cls === 'MEDIOR_PD' ? ['MEDIOR_PD'] : [])
+  const roleLabel = (c: DesignerClass) => (c === 'MEDIOR_PD' ? 'Product Designer (Medior)' : CLASS_META[c].label)
+
+  const setGender = (g: Gender | undefined) =>
+    setD(cur => ({ ...cur, gender: g, look: g && (!designer || !cur.look || cur.look.g !== g) ? pickLook(g, others) : cur.look }))
+  const reroll = () => d.gender && setD(cur => ({ ...cur, look: pickLook(d.gender!, others, cur.look) }))
+
   const save = async () => {
     if (!d.name?.trim()) return alert('Podaj imię')
-    await actions.saveDesigner({ ...(d as Designer), name: d.name.trim() })
+    if (!d.gender) return alert('Wybierz płeć')
+    const look = d.look ?? pickLook(d.gender, others)
+    await actions.saveDesigner({ ...(d as Designer), look, name: d.name.trim() })
     onClose()
   }
   return (
@@ -144,13 +239,17 @@ export function DesignerForm({ designer, onClose }: { designer?: Designer; onClo
           <input autoFocus value={d.name ?? ''} onChange={e => setD({ ...d, name: e.target.value })} />
         </label>
         <label className="field">
-          Specjalizacja
-          <input value={d.title ?? ''} placeholder="np. Design systemy, Research ilościowy" onChange={e => setD({ ...d, title: e.target.value || undefined })} />
-        </label>
-        <label className="field">
           Rola
           <select value={d.cls} onChange={e => setD({ ...d, cls: e.target.value as DesignerClass })}>
-            {CLASSES.map(c => <option key={c} value={c}>{CLASS_META[c].label}</option>)}
+            {roles.map(c => <option key={c} value={c}>{roleLabel(c)}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          Płeć
+          <select required value={d.gender ?? ''} onChange={e => setGender((e.target.value || undefined) as Gender | undefined)}>
+            <option value="" disabled>— wybierz —</option>
+            <option value="F">Kobieta</option>
+            <option value="M">Mężczyzna</option>
           </select>
         </label>
         <label className="field">
@@ -160,51 +259,19 @@ export function DesignerForm({ designer, onClose }: { designer?: Designer; onClo
           </select>
         </label>
         <div className="field full">
-          Wygląd postaci
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <div style={{ background: 'var(--input)', border: '2px solid #5f7a7c', borderRadius: 3, padding: 4 }}>
-              <Sprite cls={d.cls} look={lookOf({ id: d.id ?? 'new', look: d.look })} scale={2} state="work" />
+          Wygląd ludzika
+          {d.gender ? (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div style={{ background: 'var(--input)', border: '2px solid #5f7a7c', borderRadius: 3, padding: 4 }}>
+                <Sprite cls={d.cls} look={lookOf({ id: d.id ?? 'new', look: d.look, gender: d.gender })} scale={2} state="work" />
+              </div>
+              <span className="dim" style={{ fontSize: 13, flex: 1 }}>Skóra i strój są losowane tak, żeby nie powtarzały się w zespole.</span>
+              <button className="sm" type="button" onClick={reroll}>Losuj inny</button>
             </div>
-            {(
-              [
-                ['g', 'Postać', [['M', 'On'], ['F', 'Ona']]],
-                ['skin', 'Skóra', [[1, '1'], [2, '2'], [3, '3']]],
-                ['outfit', 'Strój', [[1, '1'], [2, '2'], [3, '3']]],
-              ] as const
-            ).map(([k, label, opts]) => (
-              <label key={k} className="field" style={{ flex: 1 }}>
-                {label}
-                <select
-                  value={String(lookOf({ id: d.id ?? 'new', look: d.look })[k])}
-                  onChange={e => {
-                    const cur = lookOf({ id: d.id ?? 'new', look: d.look })
-                    const v = k === 'g' ? e.target.value : Number(e.target.value)
-                    setD({ ...d, look: { ...cur, [k]: v } as Look })
-                  }}
-                >
-                  {opts.map(([v, l]) => <option key={String(v)} value={String(v)}>{l}</option>)}
-                </select>
-              </label>
-            ))}
-          </div>
+          ) : (
+            <span className="dim" style={{ fontSize: 13 }}>Wybierz płeć — wygląd dobierze się automatycznie.</span>
+          )}
         </div>
-        <label className="field full">
-          Ilustracja na kartę
-          <input
-            type="file"
-            accept="image/*"
-            onChange={async e => {
-              const f = e.target.files?.[0]
-              if (f) setD({ ...d, illustration: await resizeImage(f) })
-            }}
-          />
-        </label>
-        {d.illustration && (
-          <div className="full" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <img src={d.illustration} alt="" style={{ width: 80, height: 80, objectFit: 'cover', border: '3px solid #000', borderRadius: 6 }} />
-            <button className="sm" onClick={() => setD({ ...d, illustration: undefined })}>Usuń ilustrację</button>
-          </div>
-        )}
       </div>
       <div className="row-actions">
         {designer && (

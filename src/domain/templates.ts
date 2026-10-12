@@ -24,6 +24,7 @@ export const TEAM_TEMPLATES: Record<Phase, TeamDraft> = {
     ],
     mercs: { BA: 1, APM: 1 },
   },
+  OTHER: { slots: [], mercs: {} },
   DELIVERY: {
     slots: [
       { cls: 'SENIOR_PD', fte: 1, count: 1 },
@@ -34,8 +35,8 @@ export const TEAM_TEMPLATES: Record<Phase, TeamDraft> = {
 }
 
 /** Typowa długość fazy w dniach — do podpowiedzi daty końca. */
-export const PHASE_DAYS: Record<Phase, number> = { PRESALES: 20, DISCOVERY: 41, DELIVERY: 111 }
+export const PHASE_DAYS: Record<Phase, number> = { PRESALES: 20, DISCOVERY: 41, DELIVERY: 111, OTHER: 27 }
 
-export const NEXT_PHASE: Record<Phase, Phase> = { PRESALES: 'DISCOVERY', DISCOVERY: 'DELIVERY', DELIVERY: 'DELIVERY' }
+export const NEXT_PHASE: Record<Phase, Phase> = { PRESALES: 'DISCOVERY', DISCOVERY: 'DELIVERY', DELIVERY: 'DELIVERY', OTHER: 'OTHER' }
 
 export const cloneTeam = (t: TeamDraft): TeamDraft => ({ slots: t.slots.map(s => ({ ...s })), mercs: { ...t.mercs } })

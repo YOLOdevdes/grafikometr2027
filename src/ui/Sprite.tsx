@@ -149,7 +149,7 @@ function SheetSprite({ cls, look, state, scale, title, badge }: Required<Pick<Pr
   )
 }
 
-export function Sprite({ cls, merc, look, state = 'idle', scale = 3, title, badge = true }: Props) {
+export function Sprite({ cls, merc, look, state = 'idle', scale = 3, title, badge = false }: Props) {
   if (look && spriteManifest()?.looks.includes(lookKey(look))) {
     return <SheetSprite cls={cls} look={look} state={state} scale={scale} title={title} badge={badge} />
   }

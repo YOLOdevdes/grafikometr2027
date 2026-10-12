@@ -3,5 +3,6 @@ dist
 .DS_Store
 *.local
 assets-src
-public/sprites
-public/sfx
+.data
+.vercel
+*.tsbuildinfo

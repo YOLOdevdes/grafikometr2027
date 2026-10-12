@@ -1,52 +1,42 @@
 import type { CSSProperties } from 'react'
-import type { Region } from '../domain/types'
+import type { LandId, Project } from '../domain/types'
+import { LANDS as LAND_IDS } from '../domain/types'
+import LANDS from './lands.gen.json'
 
 /**
- * Tło paska podróży — warstwy parallax w widoku z boku.
- * Na razie każdy kontynent wędruje przez ten sam las (ansimuz, „SunnyLand Forest of Illusion”,
- * warstwy z scripts/build-lands.py). Nowa kraina = nowy wpis w LANDS + przypisanie w REGION_LAND.
+ * Tło paska projektu — trzy warstwy parallax (daleko → blisko) z paczki „assetpack-backgrounds”,
+ * pocięte przez scripts/build-backgrounds.py. Każdy projekt ma swoją krainę (Project.land);
+ * starsze projekty bez niej dostają krainę wyliczoną z id, żeby się nie zmieniała.
  */
 
-interface Land {
-  back: string
-  middle: string
-  ground: string
-  /** przesunięcie sceny w pionie, tak by linia gruntu wypadła na drodze (ROW_H − 24 = 94 px) */
-  sceneY: number
-  groundY: number
+export function landOf(p: Pick<Project, 'id' | 'land'>): LandId {
+  if (p.land && p.land in LANDS) return p.land
+  let h = 0
+  for (const ch of p.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  return LAND_IDS[h % LAND_IDS.length]
 }
 
-const LANDS: Record<string, Land> = {
-  forest: {
-    back: '/lands/forest-back.png',
-    middle: '/lands/forest-middle.png',
-    ground: '/lands/forest-ground.png',
-    sceneY: -106,
-    groundY: 94,
-  },
+/** Losowa kraina dla nowego projektu — spośród najrzadziej używanych w aktywnych projektach. */
+export function pickLand(projects: Project[]): LandId {
+  const count = new Map<LandId, number>(LAND_IDS.map(l => [l, 0]))
+  for (const p of projects) if (!p.archivedAt) count.set(landOf(p), (count.get(landOf(p)) ?? 0) + 1)
+  const min = Math.min(...count.values())
+  const pool = LAND_IDS.filter(l => count.get(l) === min)
+  return pool[Math.floor(Math.random() * pool.length)]
 }
 
-const REGION_LAND: Record<Region, keyof typeof LANDS> = {
-  EUROPE: 'forest',
-  NORTH_AMERICA: 'forest',
-  SOUTH_AMERICA: 'forest',
-  MIDDLE_EAST: 'forest',
-  AFRICA: 'forest',
-  ASIA: 'forest',
-  OCEANIA: 'forest',
-  OTHER: 'forest',
-}
-
-export function biomeStyle(region: Region | undefined): CSSProperties {
-  const l = LANDS[REGION_LAND[region ?? 'OTHER'] ?? 'forest']
+export function biomeStyle(p: Pick<Project, 'id' | 'land'>): CSSProperties {
+  const l = LANDS[landOf(p)]
+  const [back, mid, front] = l.layers
   return {
-    backgroundColor: '#224422',
-    backgroundImage: `url(${l.ground}), url(${l.middle}), url(${l.back})`,
-    backgroundRepeat: 'repeat-x, repeat-x, repeat-x',
-    backgroundPosition: `0 ${l.groundY}px, 0 ${l.sceneY}px, 0 ${l.sceneY}px`,
-    imageRendering: 'pixelated',
-    // dla animacji parallax (.journey.moving w styles.css)
-    '--gy': `${l.groundY}px`,
-    '--sy': `${l.sceneY}px`,
+    backgroundColor: l.bg,
+    backgroundImage: `url(${front.src}), url(${mid.src}), url(${back.src})`,
+    backgroundRepeat: 'repeat-x',
+    backgroundSize: 'auto 100%',
+    backgroundPosition: '0 0',
+    // dystanse pętli dla animacji parallax (.journey.moving w styles.css)
+    '--dx-front': `-${front.dx}px`,
+    '--dx-mid': `-${mid.dx}px`,
+    '--dx-back': `-${back.dx}px`,
   } as CSSProperties
 }

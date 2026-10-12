@@ -1,0 +1,82 @@
+{
+  "desert": {
+    "bg": "#7aa3e1",
+    "layers": [
+      {
+        "src": "/lands/desert-back.png",
+        "w": 264.0,
+        "dx": 264.0
+      },
+      {
+        "src": "/lands/desert-mid.png",
+        "w": 527.5,
+        "dx": 527.5
+      },
+      {
+        "src": "/lands/desert-front.png",
+        "w": 527.5,
+        "dx": 1055.0
+      }
+    ]
+  },
+  "forest": {
+    "bg": "#f0f2e8",
+    "layers": [
+      {
+        "src": "/lands/forest-back.png",
+        "w": 280.0,
+        "dx": 280.0
+      },
+      {
+        "src": "/lands/forest-mid.png",
+        "w": 560.5,
+        "dx": 560.5
+      },
+      {
+        "src": "/lands/forest-front.png",
+        "w": 280.0,
+        "dx": 1120.0
+      }
+    ]
+  },
+  "moon": {
+    "bg": "#160f09",
+    "layers": [
+      {
+        "src": "/lands/moon-back.png",
+        "w": 477.0,
+        "dx": 0.0
+      },
+      {
+        "src": "/lands/moon-mid.png",
+        "w": 477.0,
+        "dx": 477.0
+      },
+      {
+        "src": "/lands/moon-front.png",
+        "w": 477.0,
+        "dx": 1431.0
+      }
+    ]
+  },
+  "skies": {
+    "bg": "#5387d2",
+    "layers": [
+      {
+        "src": "/lands/skies-back.png",
+        "w": 299.0,
+        "dx": 299.0
+      },
+      {
+        "src": "/lands/skies-mid.png",
+        "w": 299.0,
+        "dx": 598.0
+      },
+      {
+        "src": "/lands/skies-front.png",
+        "w": 299.0,
+        "dx": 1196.0
+      }
+    ]
+  }
+}

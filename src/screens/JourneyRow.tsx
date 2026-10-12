@@ -1,11 +1,13 @@
 import type { FullWorld } from '../db'
 import { demandLoad } from '../domain/availability'
 import { addDaysISO, fmtRange, maxISO, minISO, overlaps, todayISO } from '../domain/dates'
-import type { Demand, DesignerClass, ISODate, Project } from '../domain/types'
-import { ABSENCE_LABEL, CLASS_META, MERC_META, PHASE_LABEL, REGION_META } from '../domain/types'
+import type { Demand, Designer, DesignerClass, ISODate, Project } from '../domain/types'
+import { ABSENCE_LABEL, CLASS_META, MERC_META, PHASE_LABEL } from '../domain/types'
 import { biomeStyle } from '../ui/biomes'
 import { designerState, fmtFte } from '../ui/common'
 import { lookOf } from '../ui/spriteSheets'
+import { AbsenceIcon, hasAbsenceIcon } from '../ui/AbsenceIcon'
+import { ProjectPeek } from '../ui/ProjectPeek'
 import { Sprite } from '../ui/Sprite'
 
 const ROW_H = 118
@@ -13,9 +15,9 @@ const SPACING = 50
 const CLASS_ORDER: Record<DesignerClass, number> = { SENIOR_PD: 0, MEDIOR_PD: 1, UX_RESEARCHER: 2 }
 const GHOST_LOOK = { g: 'M', skin: 1, outfit: 1 } as const
 
-/** Projekt jako pasek z tłem regionu: zespół idzie gęsiego wspólną drogą i stoi tam, gdzie jest dziś. */
-export function JourneyRow({ world, project: p, start, end, pos, onOpenDemand }: {
-  world: FullWorld; project: Project; start: ISODate; end: ISODate; pos: (d: ISODate) => number; onOpenDemand: (d: Demand) => void
+/** Projekt jako pasek z tłem krainy: zespół idzie gęsiego wspólną drogą i stoi tam, gdzie jest dziś. */
+export function JourneyRow({ world, project: p, start, end, pos, onOpenDemand, onOpenHero, onEditProject }: {
+  world: FullWorld; project: Project; start: ISODate; end: ISODate; pos: (d: ISODate) => number; onOpenDemand: (d: Demand) => void; onOpenHero: (d: Designer) => void; onEditProject: () => void
 }) {
   const today = todayISO()
   const last = addDaysISO(end, -1)
@@ -45,32 +47,33 @@ export function JourneyRow({ world, project: p, start, end, pos, onOpenDemand }:
   }
   const pFrom = pos(p.from)
   const pTo = pos(addDaysISO(p.to, 1))
-  const region = REGION_META[p.region ?? 'OTHER'] ?? REGION_META.OTHER
 
   return (
     <div className="tl-row" style={{ height }}>
-      <div className="tl-who journey-info" style={{ cursor: 'default', alignItems: 'flex-start', flexDirection: 'column', gap: 4, paddingTop: 8 }}>
-        <div className="nm">
-          {p.client && p.client !== p.name && <small style={{ fontSize: 10 }}>{p.client.toUpperCase()}</small>}
-          <b style={{ borderLeft: `4px solid ${p.color}`, paddingLeft: 6 }}>{p.name}</b>
-        </div>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          <span className="chip">{PHASE_LABEL[p.phase].toUpperCase()}</span>
-          {p.upcoming && <span className="chip upcoming">NADCH.</span>}
-        </div>
-        <small title={region.land}>{region.icon} {region.label}{p.country ? ` · ${p.country}` : ''}</small>
-        {mercs.length > 0 && (
-          <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-            {mercs.map(m => (
-              <span key={m.id} className="token" title={`${MERC_META[m.role].label} ×${m.count}`} style={{ padding: '0 4px 0 1px', fontSize: 10 }}>
-                <span className="dot" style={{ background: MERC_META[m.role].color, width: 14, height: 14, fontSize: 7 }}>{m.role.slice(0, 2)}</span>×{m.count}
-              </span>
-            ))}
-          </div>
-        )}
+      <div className="tl-who journey-info">
+        <ProjectPeek world={world} project={p} onEdit={onEditProject} block>
+          <span className="nm">
+            {p.client && p.client !== p.name && <small style={{ fontSize: 10 }}>{p.client.toUpperCase()}</small>}
+            <b style={{ borderLeft: `4px solid ${p.color}`, paddingLeft: 6 }}>{p.name}</b>
+          </span>
+          <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            <span className="chip">{PHASE_LABEL[p.phase].toUpperCase()}</span>
+            {p.upcoming && <span className="chip upcoming">NADCH.</span>}
+          </span>
+          <small className="journey-dates">{fmtRange(p.from, p.to)}</small>
+          {mercs.length > 0 && (
+            <span style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+              {mercs.map(m => (
+                <span key={m.id} className="token" title={`${MERC_META[m.role].label} ×${m.count}`} style={{ padding: '0 4px 0 1px', fontSize: 10 }}>
+                  <span className="dot" style={{ background: MERC_META[m.role].color, width: 14, height: 14, fontSize: 7 }}>{m.role.slice(0, 2)}</span>×{m.count}
+                </span>
+              ))}
+            </span>
+          )}
+        </ProjectPeek>
       </div>
 
-      <div className={`tl-lane journey ${p.from <= today && today <= p.to ? 'moving' : ''}`} style={biomeStyle(p.region)}>
+      <div className={`tl-lane journey ${p.from <= today && today <= p.to ? 'moving' : ''}`} style={biomeStyle(p)}>
         {/* przyciemnienie poza czasem trwania projektu */}
         <div className="fog" style={{ left: 0, width: `${pFrom}%` }} />
         <div className="fog" style={{ left: `${pTo}%`, right: 0 }} />
@@ -94,7 +97,7 @@ export function JourneyRow({ world, project: p, start, end, pos, onOpenDemand }:
                 key={d.id}
                 className="walker"
                 title={tip}
-                onClick={() => onOpenDemand(d)}
+                onClick={() => (who ? onOpenHero(who) : onOpenDemand(d))} // osoba → jej karta; wolny slot → obsadzanie
                 style={{ left: `calc(max(${party.pct}cqw - ${i * SPACING}px, ${(party.members.length - 1 - i) * 20}px) - 36px)`, top: ROAD_Y + 4, zIndex: 10 - i }}
               >
                 {who ? (
@@ -105,7 +108,12 @@ export function JourneyRow({ world, project: p, start, end, pos, onOpenDemand }:
                 <span className={`tag ${who ? '' : 'open'}`} style={{ borderColor: color, top: i % 2 ? -26 : -12 }}>
                   {who ? who.name : `? ${CLASS_META[d.cls].short}`}
                   {fmtFte(demandLoad(d)) !== '1.0' && ` · ${fmtFte(demandLoad(d))}`}
-                  {m.absences.length > 0 && ' 🏝'}
+                  {(() => {
+                    const a = [...m.absences].sort((x, y) => x.from.localeCompare(y.from)).find(x => hasAbsenceIcon(x.type))
+                    if (!a) return null
+                    const now = a.from <= today
+                    return <AbsenceIcon type={a.type} size={1} dim={!now} title={`${ABSENCE_LABEL[a.type]} ${now ? 'teraz, ' : ''}${fmtRange(a.from, a.to)}`} />
+                  })()}
                 </span>
               </div>
             )

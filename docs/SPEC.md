@@ -160,7 +160,7 @@ Placeholder: `public/art/senior-pd-placeholder.png` (gpt-image przez Figma AI). 
 - Pixel art: czcionka Pixelify Sans (UI) + Press Start 2P (nagłówki), ramki CSS, `image-rendering: pixelated`.
 - Ilustracje: upload per osoba + domyślna ilustracja klasy.
 - Dźwięk kliku: Mixkit „Modern click box check” (`public/sfx/click.wav`, poza repo — licencja Mixkit), Web Audio, wyciszenie w nagłówku.
-- Muzyka: radio YouTube „Datawave FM” (Nightride FM) przez IFrame API, głośność 30%, widoczny mini-odtwarzacz w rogu (wymóg regulaminu YouTube), wł./wył. w menu startowym, nagłówku i na radiu; wymaga internetu.
+- Muzyka: strumień audio „Datawave FM” (Nightride FM, `stream.nightride.fm/datawave.mp3`), głośność domyślnie 30%, małe okienko w rogu: play/stop, głośność, wyłącz; wł./wył. w menu startowym i w Ustawieniach; wymaga internetu.
 - Później opcjonalnie: przeniesienie na Vercel + baza, jeśli narzędzie ma trafić do zespołu.
 
 ## 9. Poza zakresem v1

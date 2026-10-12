@@ -1,0 +1,33 @@
+{
+  "source": "Mucho Pixels \u2014 Character Animation Asset Pack v1.0",
+  "frame": {
+    "w": 36,
+    "h": 32
+  },
+  "frames": {
+    "idle": 8,
+    "walk": 8,
+    "tired": 6,
+    "sleep": 1
+  },
+  "looks": [
+    "M11",
+    "M12",
+    "M13",
+    "M21",
+    "M22",
+    "M23",
+    "M31",
+    "M32",
+    "M33",
+    "F11",
+    "F12",
+    "F13",
+    "F21",
+    "F22",
+    "F23",
+    "F31",
+    "F32",
+    "F33"
+  ]
+}

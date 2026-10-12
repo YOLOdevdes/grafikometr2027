@@ -3,20 +3,17 @@
  * Web Audio zamiast <audio>, żeby klik nie miał opóźnienia i mógł się nakładać przy szybkim klikaniu.
  */
 
-const MUTE_KEY = 'pipolator.mute'
 const VOLUME = 0.45
 
 let ctx: AudioContext | null = null
 let buffer: AudioBuffer | null = null
 let loading: Promise<void> | null = null
-let muted = readMuted()
 
-function readMuted() {
-  try {
-    return localStorage.getItem(MUTE_KEY) === '1'
-  } catch {
-    return false
-  }
+// klik jest zawsze włączony; usuwamy pozostałość po dawnym przełączniku wyciszenia
+try {
+  localStorage.removeItem('pipolator.mute')
+} catch {
+  /* brak storage */
 }
 
 function load() {
@@ -34,7 +31,6 @@ function load() {
 }
 
 export async function playClick() {
-  if (muted) return
   await load()
   if (!ctx || !buffer) return
   if (ctx.state === 'suspended') await ctx.resume()
@@ -44,17 +40,6 @@ export async function playClick() {
   src.buffer = buffer
   src.connect(gain).connect(ctx.destination)
   src.start()
-}
-
-export const isMuted = () => muted
-
-export function setMuted(m: boolean) {
-  muted = m
-  try {
-    localStorage.setItem(MUTE_KEY, m ? '1' : '0')
-  } catch {
-    /* brak storage */
-  }
 }
 
 /** Wszystko, co w aplikacji da się kliknąć. */
