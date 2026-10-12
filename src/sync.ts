@@ -1,7 +1,6 @@
 import { liveQuery } from 'dexie'
 import { useEffect, useState } from 'react'
 import { exportData, replaceAll, type Snapshot } from './db'
-import { PREVIEW_TOKEN } from './mode'
 
 /**
  * Serwer jest źródłem prawdy, a baza w przeglądarce (Dexie) — kopią roboczą.
@@ -29,7 +28,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 // ---------- sesja ----------
 
 export const api = {
-  session: () => call<{ authed: boolean; previewPath?: string }>('/api/session'),
+  session: () => call<{ authed: boolean }>('/api/session'),
   login: (password: string) => call<{ ok: true }>('/api/login', { method: 'POST', body: JSON.stringify({ password }) }),
   logout: () => call<{ ok: true }>('/api/logout', { method: 'POST' }),
 }
@@ -127,10 +126,10 @@ export async function flush() {
 
 // ---------- podgląd: odświeżanie z serwera ----------
 
-/** Pobiera stan do podglądu; null = link nieaktywny. */
+/** Pobiera stan do podglądu (publiczny, okrojony); false = serwer odmówił. */
 export async function pullPreview(): Promise<boolean> {
   try {
-    const doc = await call<ServerDoc>(`/api/state?t=${encodeURIComponent(PREVIEW_TOKEN ?? '')}`)
+    const doc = await call<ServerDoc>('/api/state?view=preview')
     if (doc.rev !== rev || !lastSynced) {
       rev = doc.rev
       await replaceAll(doc.data ?? {})

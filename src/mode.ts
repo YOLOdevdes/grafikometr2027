@@ -1,9 +1,10 @@
 /**
  * Tryb aplikacji wynika z adresu:
- *   /p/<token>  → publiczny podgląd (tylko odczyt, dane z serwera, osobna baza w przeglądarce)
- *   reszta      → edycja po zalogowaniu
+ *   /podglad (oraz stare linki /p/<kod>) → publiczny podgląd: tylko odczyt, bez logowania,
+ *                                          dane z serwera, osobna baza w przeglądarce
+ *   reszta                               → edycja po zalogowaniu
  */
-const m = typeof location !== 'undefined' ? location.pathname.match(/^\/p\/([A-Za-z0-9_-]{8,})\/?$/) : null
+export const PREVIEW_PATH = '/podglad'
 
-export const PREVIEW_TOKEN: string | null = m?.[1] ?? null
-export const READ_ONLY = PREVIEW_TOKEN !== null
+const path = typeof location !== 'undefined' ? location.pathname : ''
+export const READ_ONLY = /^\/podglad\/?$/.test(path) || /^\/p\/[A-Za-z0-9_-]+\/?$/.test(path)

@@ -1,4 +1,4 @@
-import { HttpError, checkPreviewToken, isAuthed, json, requireAuth, route, sessionCookie, store } from './_lib.js'
+import { HttpError, isAuthed, json, requireAuth, route, sessionCookie, store } from './_lib.js'
 
 /**
  * Cały stan aplikacji jako jeden dokument JSON (osoby, projekty, sloty, nieobecności, historia, zadania…).
@@ -23,15 +23,11 @@ function forPreview(data: Data | null): Data | null {
   return { ...data, absences }
 }
 
-/** GET (zalogowany) → pełne dane; GET ?t=<token podglądu> → dane do podglądu. */
+/** GET (zalogowany) → pełne dane; GET ?view=preview (każdy) → dane do publicznego podglądu. */
 export const GET = route(async req => {
   const doc = await load()
-  const t = new URL(req.url).searchParams.get('t')
-  // link podglądu zawsze dostaje wersję okrojoną — także gdy przeglądarka ma sesję edycji
-  if (t !== null) {
-    if (!checkPreviewToken(t)) throw new HttpError(401, 'Brak dostępu')
-    return json({ ...doc, data: forPreview(doc.data) })
-  }
+  // podgląd jest publiczny i zawsze dostaje wersję okrojoną — także gdy przeglądarka ma sesję edycji
+  if (new URL(req.url).searchParams.get('view') === 'preview') return json({ ...doc, data: forPreview(doc.data) })
   if (isAuthed(req)) return json(doc, 200, { 'set-cookie': sessionCookie() })
   throw new HttpError(401, 'Brak dostępu')
 })

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { exportJSON, importJSON, useWorld, wipe } from './db'
-import { READ_ONLY } from './mode'
+import { PREVIEW_PATH, READ_ONLY } from './mode'
 import { api, flush, pull, pullPreview, startAutoSave, startPreviewPolling, stopAutoSave, useSyncStatus, type SyncStatus } from './sync'
 import { loadOn } from './domain/availability'
 import { addDaysISO, mondayOf, todayISO, workdays } from './domain/dates'
@@ -67,7 +67,6 @@ export default function App() {
   const [heroId, setHeroId] = useState<string | null>(null)
   const [started, setStarted] = useState(false)
   const [auth, setAuth] = useState<Auth>('checking')
-  const [previewPath, setPreviewPath] = useState<string | null>(null)
   const sync = useSyncStatus()
 
   const expire = async () => {
@@ -77,11 +76,10 @@ export default function App() {
     setStarted(false)
     alert('Sesja wygasła — zaloguj się ponownie.')
   }
-  const enter = async (path?: string) => {
+  const enter = async () => {
     const { empty } = await pull()
     if (empty) await wipe() // pusty serwer = start od zera
     startAutoSave(expire)
-    setPreviewPath(path ?? (await api.session()).previewPath ?? null)
     setAuth('in')
   }
   const logout = async () => {
@@ -100,7 +98,7 @@ export default function App() {
       return startPreviewPolling()
     }
     api.session().then(
-      s => (s.authed ? enter(s.previewPath) : setAuth('out')),
+      s => (s.authed ? enter() : setAuth('out')),
       () => setAuth('error'),
     )
     return () => stopAutoSave()
@@ -153,10 +151,10 @@ export default function App() {
 
   if (!world) return null
 
-  /** Otwiera podgląd w nowej karcie i kopiuje link do schowka (do wysłania designerom). */
+  /** Podgląd tylko do odczytu, dostępny bez logowania. Zalogowanym otwiera się w nowej karcie (+ link w schowku). */
   const openPreview = () => {
-    if (!previewPath) return
-    const url = `${location.origin}${previewPath}`
+    const url = `${location.origin}${PREVIEW_PATH}`
+    if (auth !== 'in') return location.assign(url)
     window.open(url, '_blank', 'noopener')
     navigator.clipboard.writeText(url).catch(() => {})
   }
@@ -183,19 +181,20 @@ export default function App() {
         },
       },
     }
+    const preview: TitleItem = { label: 'PODGLĄD', action: openPreview }
     const byAuth: Record<Auth, { items: TitleItem[]; message?: string }> = {
       checking: { items: settingsItems, message: 'ŁĄCZENIE…' },
-      out: { items: [login, ...settingsItems] },
+      out: { items: [login, preview, ...settingsItems] },
       in: {
         items: [
           { label: 'START GAME', action: () => setStarted(true) },
-          ...(previewPath ? [{ label: 'PODGLĄD', action: openPreview }] : []),
+          preview,
           ...settingsItems,
           { label: 'LOGOUT', action: logout },
         ],
       },
       preview: { items: [{ label: 'START', action: () => setStarted(true) }, ...settingsItems], message: 'TRYB PODGLĄDU' },
-      deadLink: { items: settingsItems, message: 'TEN LINK PODGLĄDU JEST NIEAKTYWNY' },
+      deadLink: { items: settingsItems, message: 'PODGLĄD JEST NIEDOSTĘPNY' },
       error: { items: settingsItems, message: 'BRAK POŁĄCZENIA Z SERWEREM — ODŚWIEŻ STRONĘ' },
     }
     return (

@@ -4,7 +4,6 @@
  * Zmienne środowiskowe:
  *   ADMIN_PASSWORD   hasło do trybu edycji
  *   SESSION_SECRET   klucz do podpisywania ciasteczka sesji (losowy, długi)
- *   PREVIEW_TOKEN    sekret w publicznym linku podglądu: /p/<PREVIEW_TOKEN>
  *   KV_REST_API_URL / KV_REST_API_TOKEN  (albo UPSTASH_REDIS_REST_URL / _TOKEN) — baza Upstash Redis
  *   GM_DEV_STORE     tylko lokalnie: plik JSON zamiast Redisa
  */
@@ -59,8 +58,6 @@ export function safeEqual(a: string, b: string) {
 }
 
 export const checkPassword = (pw: string) => safeEqual(pw, need('ADMIN_PASSWORD'))
-export const checkPreviewToken = (t: string | null) => !!t && safeEqual(t, need('PREVIEW_TOKEN'))
-export const previewToken = () => need('PREVIEW_TOKEN')
 
 // ---------- sesja w ciasteczku: <wygaśnięcie>.<podpis> ----------
 
